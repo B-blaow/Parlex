@@ -8,6 +8,7 @@ import com.translive.app.data.db.TranslationDao
 import com.translive.app.data.model.Language
 import com.translive.app.data.model.TranslationEntry
 import com.translive.app.engine.TranslationEngine
+import com.translive.app.engine.TtsEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -31,7 +32,8 @@ class TranslationViewModel @Inject constructor(
     private val app: Application,
     private val engine: TranslationEngine,
     private val translationDao: TranslationDao,
-    private val modelRepository: ModelRepository
+    private val modelRepository: ModelRepository,
+    val ttsEngine: TtsEngine
 ) : AndroidViewModel(app) {
 
     private val _uiState = MutableStateFlow(TranslationUiState())
@@ -74,6 +76,11 @@ class TranslationViewModel @Inject constructor(
                         activeModelName = if (loaded) activeVariant?.quantName else null,
                         error = if (!loaded) "Не удалось загрузить модель" else null
                     )
+                }
+
+                // Auto-load TTS if available
+                if (loaded) {
+                    ttsEngine.loadModel()
                 }
             } catch (e: Exception) {
                 _uiState.update {

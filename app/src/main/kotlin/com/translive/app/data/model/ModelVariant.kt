@@ -26,20 +26,8 @@ data class ModelVariant(
     companion object {
         private const val MRADERMACHER_BASE =
             "https://huggingface.co/mradermacher/HY-MT1.5-1.8B-GGUF/resolve/main"
-        private const val TENCENT_BASE =
-            "https://huggingface.co/tencent/Hy-MT1.5-1.8B-2bit-GGUF/resolve/main"
 
         val ALL: List<ModelVariant> = listOf(
-            ModelVariant(
-                id = "2bit-tencent",
-                quantName = "2-bit (Tencent)",
-                displayName = "Ультралёгкая",
-                description = "Оптимизирована Tencent для мобильных. Самая быстрая.",
-                sizeBytes = 601_000_000L,
-                ramEstimateMb = 1024,
-                downloadUrl = "$TENCENT_BASE/Hy-MT1.5-1.8B-2bit.gguf?download=true",
-                filename = "Hy-MT1.5-1.8B-2bit.gguf"
-            ),
             ModelVariant(
                 id = "q2_k",
                 quantName = "Q2_K",

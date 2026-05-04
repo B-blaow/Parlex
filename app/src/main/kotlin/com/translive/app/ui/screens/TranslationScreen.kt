@@ -24,6 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.translive.app.data.model.Language
+import com.translive.app.engine.TtsEngine
+import com.translive.app.engine.TtsState
 import com.translive.app.ui.components.LanguagePickerSheet
 import com.translive.app.ui.theme.Teal
 import com.translive.app.ui.viewmodel.TranslationViewModel
@@ -37,6 +39,8 @@ fun TranslationScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val clipboardManager = LocalClipboardManager.current
+    val ttsEngine = viewModel.ttsEngine
+    val ttsState by ttsEngine.state.collectAsState()
 
     var showSourceLangPicker by remember { mutableStateOf(false) }
     var showTargetLangPicker by remember { mutableStateOf(false) }
@@ -259,11 +263,19 @@ fun TranslationScreen(
                                 )
                             }
                             IconButton(onClick = {
-                                // TODO: Phase 2 — TTS playback
-                            }) {
+                                if (ttsState == TtsState.SPEAKING) {
+                                    ttsEngine.stop()
+                                } else {
+                                    ttsEngine.speak(uiState.translatedText)
+                                }
+                            }, enabled = ttsEngine.isModelReady.collectAsState().value) {
                                 Icon(
-                                    Icons.Filled.VolumeUp, "Speak",
-                                    tint = MaterialTheme.colorScheme.primary
+                                    if (ttsState == TtsState.SPEAKING) Icons.Filled.StopCircle
+                                    else Icons.Filled.VolumeUp,
+                                    "Speak",
+                                    tint = if (ttsState == TtsState.SPEAKING)
+                                        MaterialTheme.colorScheme.error
+                                    else MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
