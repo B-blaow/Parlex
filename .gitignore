@@ -1,6 +1,9 @@
 # Parlex — build artifacts, models, IDE, secrets
 
-# Android build
+# Signing
+*.jks
+*.keystore
+keystore.properties
 *.apk
 *.aab
 /build/

@@ -6,6 +6,15 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
+import java.io.FileInputStream
+import java.util.Properties
+
+val keystoreProps = Properties()
+val keystoreFile = rootProject.file("keystore.properties")
+if (keystoreFile.exists()) {
+    keystoreProps.load(FileInputStream(keystoreFile))
+}
+
 android {
     namespace = "com.translive.app"
     compileSdk = 35
@@ -33,10 +42,23 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val f = rootProject.file("keystore.properties")
+            if (f.exists()) {
+                storeFile = rootProject.file(keystoreProps["storeFile"].toString())
+                storePassword = keystoreProps["storePassword"].toString()
+                keyAlias = keystoreProps["keyAlias"].toString()
+                keyPassword = keystoreProps["keyPassword"].toString()
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
