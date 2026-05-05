@@ -1,25 +1,31 @@
-# TransLive — built files, models, secrets
+# Parlex — build artifacts, models, IDE, secrets
+
+# Android build
 *.apk
 *.aab
-*.gguf
-*.bin
-*.so
-*.o
 /build/
 /app/build/
-/.gradle/
-/local.properties
-/.idea/
-*.iml
-/app/src/main/cpp/llama.cpp/
-/models/
-
-.vscode/
-
 app/.cxx/
 build_log*.txt
-*.apk
 
+# Gradle
+/.gradle/
+/local.properties
+
+# IDE
+/.idea/
+*.iml
+.vscode/
+
+# Native libs (built locally)
+*.so
+*.o
+
+# Models (downloaded at runtime)
+*.gguf
+*.bin
+/models/
+
+# Native engines (cloned separately)
 app/src/main/cpp/llama.cpp/
 app/src/main/cpp/whisper.cpp/
-models/
