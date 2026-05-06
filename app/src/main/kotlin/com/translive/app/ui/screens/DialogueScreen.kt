@@ -31,6 +31,7 @@ import com.translive.app.ui.viewmodel.DialogueViewModel
 @Composable
 fun DialogueScreen(
     onNavigateToTranslate: () -> Unit,
+    onNavigateToCamera: () -> Unit = {},
     onNavigateToHistory: () -> Unit,
     onNavigateToModels: () -> Unit,
     onNavigateToSettings: () -> Unit,
@@ -63,6 +64,12 @@ fun DialogueScreen(
                     onClick = { },
                     icon = { Icon(Icons.Filled.Mic, "Dialogue") },
                     label = { Text("Диалог") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onNavigateToCamera,
+                    icon = { Icon(Icons.Filled.CameraAlt, "Camera") },
+                    label = { Text("Камера") }
                 )
                 NavigationBarItem(
                     selected = false,

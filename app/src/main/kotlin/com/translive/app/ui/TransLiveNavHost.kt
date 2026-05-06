@@ -6,6 +6,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.translive.app.ui.screens.*
 
+@androidx.camera.core.ExperimentalGetImage
 @Composable
 fun TransLiveNavHost() {
     val navController = rememberNavController()
@@ -21,6 +22,7 @@ fun TransLiveNavHost() {
         composable("translate") {
             TranslationScreen(
                 onNavigateToDialogue = { navigateTo("dialogue") },
+                onNavigateToCamera = { navigateTo("camera") },
                 onNavigateToHistory = { navigateTo("history") },
                 onNavigateToModels = { navigateTo("models") },
                 onNavigateToSettings = { navigateTo("settings") }
@@ -29,6 +31,16 @@ fun TransLiveNavHost() {
         composable("dialogue") {
             DialogueScreen(
                 onNavigateToTranslate = { navigateTo("translate") },
+                onNavigateToCamera = { navigateTo("camera") },
+                onNavigateToHistory = { navigateTo("history") },
+                onNavigateToModels = { navigateTo("models") },
+                onNavigateToSettings = { navigateTo("settings") }
+            )
+        }
+        composable("camera") {
+            CameraScreen(
+                onNavigateToTranslate = { navigateTo("translate") },
+                onNavigateToDialogue = { navigateTo("dialogue") },
                 onNavigateToHistory = { navigateTo("history") },
                 onNavigateToModels = { navigateTo("models") },
                 onNavigateToSettings = { navigateTo("settings") }
@@ -38,6 +50,7 @@ fun TransLiveNavHost() {
             HistoryScreen(
                 onNavigateToTranslate = { navigateTo("translate") },
                 onNavigateToDialogue = { navigateTo("dialogue") },
+                onNavigateToCamera = { navigateTo("camera") },
                 onNavigateToModels = { navigateTo("models") },
                 onNavigateToSettings = { navigateTo("settings") }
             )
@@ -46,6 +59,7 @@ fun TransLiveNavHost() {
             ModelManagerScreen(
                 onNavigateToTranslate = { navigateTo("translate") },
                 onNavigateToDialogue = { navigateTo("dialogue") },
+                onNavigateToCamera = { navigateTo("camera") },
                 onNavigateToHistory = { navigateTo("history") },
                 onNavigateToSettings = { navigateTo("settings") }
             )
@@ -54,6 +68,7 @@ fun TransLiveNavHost() {
             SettingsScreen(
                 onNavigateToTranslate = { navigateTo("translate") },
                 onNavigateToDialogue = { navigateTo("dialogue") },
+                onNavigateToCamera = { navigateTo("camera") },
                 onNavigateToHistory = { navigateTo("history") },
                 onNavigateToModels = { navigateTo("models") }
             )

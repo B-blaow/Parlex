@@ -36,6 +36,7 @@ import java.util.*
 fun HistoryScreen(
     onNavigateToTranslate: () -> Unit,
     onNavigateToDialogue: () -> Unit,
+    onNavigateToCamera: () -> Unit = {},
     onNavigateToModels: () -> Unit,
     onNavigateToSettings: () -> Unit,
     viewModel: HistoryViewModel = hiltViewModel()
@@ -60,6 +61,12 @@ fun HistoryScreen(
                     onClick = onNavigateToDialogue,
                     icon = { Icon(Icons.Filled.Mic, "Dialogue") },
                     label = { Text("Диалог") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onNavigateToCamera,
+                    icon = { Icon(Icons.Filled.CameraAlt, "Camera") },
+                    label = { Text("Камера") }
                 )
                 NavigationBarItem(
                     selected = true,
