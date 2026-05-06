@@ -42,29 +42,44 @@ class CameraTranslateEngine @Inject constructor() {
 
     /**
      * Map our Language codes to ML Kit TranslateLanguage codes.
+     * ML Kit supports 59 languages — most of ours are covered.
      */
     private fun toMlKitLang(code: String): String? {
         return when (code) {
-            "ru" -> TranslateLanguage.RUSSIAN
             "en" -> TranslateLanguage.ENGLISH
-            "de" -> TranslateLanguage.GERMAN
-            "fr" -> TranslateLanguage.FRENCH
-            "es" -> TranslateLanguage.SPANISH
-            "it" -> TranslateLanguage.ITALIAN
-            "pt" -> TranslateLanguage.PORTUGUESE
-            "zh" -> TranslateLanguage.CHINESE
+            "zh", "zh-Hant" -> TranslateLanguage.CHINESE
             "ja" -> TranslateLanguage.JAPANESE
             "ko" -> TranslateLanguage.KOREAN
-            "ar" -> TranslateLanguage.ARABIC
-            "hi" -> TranslateLanguage.HINDI
-            "tr" -> TranslateLanguage.TURKISH
-            "pl" -> TranslateLanguage.POLISH
-            "uk" -> TranslateLanguage.UKRAINIAN
+            "fr" -> TranslateLanguage.FRENCH
+            "de" -> TranslateLanguage.GERMAN
+            "es" -> TranslateLanguage.SPANISH
+            "pt" -> TranslateLanguage.PORTUGUESE
+            "it" -> TranslateLanguage.ITALIAN
             "nl" -> TranslateLanguage.DUTCH
+            "pl" -> TranslateLanguage.POLISH
             "cs" -> TranslateLanguage.CZECH
-            "sv" -> TranslateLanguage.SWEDISH
-            "vi" -> TranslateLanguage.VIETNAMESE
+            "tr" -> TranslateLanguage.TURKISH
+            "uk" -> TranslateLanguage.UKRAINIAN
+            "ru" -> TranslateLanguage.RUSSIAN
+            "hi" -> TranslateLanguage.HINDI
+            "bn" -> TranslateLanguage.BENGALI
+            "gu" -> TranslateLanguage.GUJARATI
+            "mr" -> TranslateLanguage.MARATHI
+            "ta" -> TranslateLanguage.TAMIL
+            "te" -> TranslateLanguage.TELUGU
+            "ur" -> TranslateLanguage.URDU
+            "fa" -> TranslateLanguage.PERSIAN
+            "he" -> TranslateLanguage.HEBREW
+            "ar" -> TranslateLanguage.ARABIC
             "th" -> TranslateLanguage.THAI
+            "vi" -> TranslateLanguage.VIETNAMESE
+            "id" -> TranslateLanguage.INDONESIAN
+            "ms" -> TranslateLanguage.MALAY
+            "fil" -> TranslateLanguage.TAGALOG
+            // Dialects — map to closest supported
+            "yue", "nan" -> TranslateLanguage.CHINESE
+            // Not in ML Kit Translation
+            "my", "km", "mn", "bo", "ug" -> null
             else -> null
         }
     }

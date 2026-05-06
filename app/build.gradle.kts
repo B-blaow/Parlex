@@ -145,4 +145,10 @@ dependencies {
 
     // ML Kit Translation (on-device NMT — fast, for camera realtime)
     implementation("com.google.mlkit:translate:17.0.3")
+
+    // Tesseract4Android (Cyrillic/Arabic/Thai/etc. OCR — ML Kit doesn't support these scripts)
+    implementation("com.github.adaptech-cz.Tesseract4Android:tesseract4android:4.9.0")
+
+    // ML Kit Devanagari text recognition (Hindi, Marathi)
+    implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")
 }
