@@ -150,7 +150,7 @@ class DialogueViewModel @Inject constructor(
                     toLang = state.sourceLanguage
                 }
 
-                val translated = engine.translate(
+                val translated = engine.translateSafe(
                     sourceText = result.text,
                     source = fromLang,
                     target = toLang

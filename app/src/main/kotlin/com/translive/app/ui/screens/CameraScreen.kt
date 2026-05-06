@@ -2,17 +2,14 @@ package com.translive.app.ui.screens
 
 import android.Manifest
 import android.graphics.Bitmap
-import android.graphics.Matrix
 import android.view.ViewGroup
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.animation.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -26,10 +23,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -57,7 +55,6 @@ fun CameraScreen(
     viewModel: CameraViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
     val uiState by viewModel.uiState.collectAsState()
 
     var showSourcePicker by remember { mutableStateOf(false) }
@@ -72,14 +69,10 @@ fun CameraScreen(
         val granted = ContextCompat.checkSelfPermission(
             context, Manifest.permission.CAMERA
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        if (granted) {
-            viewModel.setPermissionGranted(true)
-        } else {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
-        }
+        if (granted) viewModel.setPermissionGranted(true)
+        else permissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
-    // Preview view reference for bitmap capture
     var previewViewRef by remember { mutableStateOf<PreviewView?>(null) }
 
     Scaffold(
@@ -125,38 +118,28 @@ fun CameraScreen(
                 .padding(paddingValues)
         ) {
             if (!uiState.hasCameraPermission) {
-                // Permission denied fallback
+                // Permission denied
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Icon(
-                        Icons.Filled.CameraAlt, "Camera",
-                        modifier = Modifier.size(64.dp),
-                        tint = Color.White.copy(alpha = 0.5f)
-                    )
+                    Icon(Icons.Filled.CameraAlt, null, Modifier.size(64.dp), tint = Color.White.copy(0.5f))
                     Spacer(Modifier.height(16.dp))
                     Text("Доступ к камере не разрешён", color = Color.White)
                     Spacer(Modifier.height(8.dp))
-                    Button(onClick = {
-                        permissionLauncher.launch(Manifest.permission.CAMERA)
-                    }) {
+                    Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
                         Text("Разрешить")
                     }
                 }
             } else {
                 when (uiState.mode) {
                     CameraMode.LIVE -> {
-                        // Live camera preview
-                        LiveCameraView(
-                            viewModel = viewModel,
-                            onPreviewView = { previewViewRef = it }
-                        )
+                        LiveCameraView(viewModel = viewModel, onPreviewView = { previewViewRef = it })
 
-                        // OCR overlay
-                        if (uiState.blocks.isNotEmpty()) {
-                            TranslationOverlay(
+                        // Lightweight OCR highlight — just thin colored borders
+                        if (uiState.blocks.isNotEmpty() && uiState.imageWidth > 0) {
+                            OcrHighlightOverlay(
                                 blocks = uiState.blocks,
                                 imageWidth = uiState.imageWidth,
                                 imageHeight = uiState.imageHeight
@@ -164,52 +147,36 @@ fun CameraScreen(
                         }
                     }
                     CameraMode.CAPTURE -> {
-                        // Captured bitmap with pinch-to-zoom
                         CaptureView(
                             bitmap = uiState.capturedBitmap,
                             blocks = uiState.blocks,
                             imageWidth = uiState.imageWidth,
-                            imageHeight = uiState.imageHeight,
-                            isProcessing = uiState.isProcessing
+                            imageHeight = uiState.imageHeight
                         )
                     }
                 }
 
-                // Controls overlay at bottom
+                // Controls
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 8.dp)
                 ) {
-                    // Capture / Back button
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                         if (uiState.mode == CameraMode.LIVE) {
-                            // Capture button
                             IconButton(
                                 onClick = {
-                                    val bitmap = previewViewRef?.bitmap
-                                    if (bitmap != null) {
-                                        viewModel.capture(bitmap)
-                                    }
+                                    previewViewRef?.bitmap?.let { viewModel.capture(it) }
                                 },
                                 modifier = Modifier
                                     .size(72.dp)
                                     .clip(CircleShape)
                                     .background(Color.White.copy(alpha = 0.3f))
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(56.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White)
-                                )
+                                Box(Modifier.size(56.dp).clip(CircleShape).background(Color.White))
                             }
                         } else {
-                            // Back to live
                             FilledTonalButton(onClick = { viewModel.backToLive() }) {
                                 Icon(Icons.Filled.CameraAlt, null)
                                 Spacer(Modifier.width(8.dp))
@@ -249,27 +216,18 @@ fun CameraScreen(
                     }
                 }
 
-                // Processing indicator
                 if (uiState.isProcessing) {
-                    LinearProgressIndicator(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.TopCenter)
-                    )
+                    LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
                 }
             }
         }
     }
 
-    // Language pickers
     if (showSourcePicker) {
         LanguagePickerSheet(
             selectedLanguage = uiState.sourceLanguage,
             excludeLanguage = uiState.targetLanguage,
-            onLanguageSelected = {
-                viewModel.setSourceLanguage(it)
-                showSourcePicker = false
-            },
+            onLanguageSelected = { viewModel.setSourceLanguage(it); showSourcePicker = false },
             onDismiss = { showSourcePicker = false }
         )
     }
@@ -277,15 +235,15 @@ fun CameraScreen(
         LanguagePickerSheet(
             selectedLanguage = uiState.targetLanguage,
             excludeLanguage = uiState.sourceLanguage,
-            onLanguageSelected = {
-                viewModel.setTargetLanguage(it)
-                showTargetPicker = false
-            },
+            onLanguageSelected = { viewModel.setTargetLanguage(it); showTargetPicker = false },
             onDismiss = { showTargetPicker = false }
         )
     }
 }
 
+/**
+ * Live camera — just the preview, no overlay processing here.
+ */
 @androidx.camera.core.ExperimentalGetImage
 @Composable
 private fun LiveCameraView(
@@ -312,11 +270,9 @@ private fun LiveCameraView(
             val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
             cameraProviderFuture.addListener({
                 val provider = cameraProviderFuture.get()
-
                 val preview = Preview.Builder().build().also {
                     it.surfaceProvider = previewView.surfaceProvider
                 }
-
                 val imageAnalysis = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
@@ -325,14 +281,11 @@ private fun LiveCameraView(
                             viewModel.processLiveFrame(imageProxy)
                         }
                     }
-
                 try {
                     provider.unbindAll()
                     provider.bindToLifecycle(
-                        lifecycleOwner,
-                        CameraSelector.DEFAULT_BACK_CAMERA,
-                        preview,
-                        imageAnalysis
+                        lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA,
+                        preview, imageAnalysis
                     )
                 } catch (e: Exception) {
                     android.util.Log.e("CameraScreen", "Camera bind failed: ${e.message}")
@@ -342,61 +295,59 @@ private fun LiveCameraView(
     )
 }
 
+/**
+ * Live OCR overlay — thin colored borders around detected text blocks.
+ * No text rendering, just clean outlines showing where text was found.
+ */
 @Composable
-private fun TranslationOverlay(
+private fun OcrHighlightOverlay(
     blocks: List<TranslatedBlock>,
     imageWidth: Int,
     imageHeight: Int
 ) {
-    val textMeasurer = rememberTextMeasurer()
-
     Canvas(modifier = Modifier.fillMaxSize()) {
+        // The camera image is typically rotated. ML Kit returns coords
+        // in the rotated image space. PreviewView FILL_CENTER scales
+        // the image to fill the view, so we scale proportionally.
         val scaleX = size.width / imageWidth.toFloat()
         val scaleY = size.height / imageHeight.toFloat()
+        val scale = maxOf(scaleX, scaleY) // FILL_CENTER uses max
+        val offsetX = (size.width - imageWidth * scale) / 2f
+        val offsetY = (size.height - imageHeight * scale) / 2f
 
         for (block in blocks) {
             val box = block.boundingBox
-            val left = box.left * scaleX
-            val top = box.top * scaleY
-            val right = box.right * scaleX
-            val bottom = box.bottom * scaleY
-            val w = right - left
-            val h = bottom - top
+            // Filter tiny blocks (noise)
+            if (box.width() < 20 || box.height() < 10) continue
 
-            // Semi-transparent background
-            drawRect(
-                color = Color.Black.copy(alpha = 0.6f),
+            val left = box.left * scale + offsetX
+            val top = box.top * scale + offsetY
+            val w = box.width() * scale
+            val h = box.height() * scale
+
+            // Draw rounded border
+            drawRoundRect(
+                color = Color(0xFF4FC3F7),
                 topLeft = Offset(left, top),
-                size = Size(w, h)
+                size = Size(w, h),
+                cornerRadius = CornerRadius(4f),
+                style = Stroke(width = 2.5f)
             )
-
-            // Translated text
-            val displayText = block.translatedText.ifBlank { block.originalText }
-            val fontSize = (h * 0.35f).coerceIn(10f, 24f)
-
-            val layoutResult = textMeasurer.measure(
-                text = AnnotatedString(displayText),
-                style = TextStyle(
-                    color = Color.White,
-                    fontSize = fontSize.sp,
-                    lineHeight = (fontSize * 1.2f).sp
-                ),
-                constraints = androidx.compose.ui.unit.Constraints(
-                    maxWidth = w.toInt().coerceAtLeast(1)
-                )
-            )
-            drawText(layoutResult, topLeft = Offset(left + 2f, top + 2f))
         }
     }
 }
 
+/**
+ * Captured image with pinch-to-zoom + translation overlay.
+ * Translation text is rendered over a semi-transparent background
+ * on top of each detected text block.
+ */
 @Composable
 private fun CaptureView(
     bitmap: Bitmap?,
     blocks: List<TranslatedBlock>,
     imageWidth: Int,
-    imageHeight: Int,
-    isProcessing: Boolean
+    imageHeight: Int
 ) {
     if (bitmap == null) return
 
@@ -404,12 +355,12 @@ private fun CaptureView(
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
     val textMeasurer = rememberTextMeasurer()
-
     val imageBitmap = remember(bitmap) { bitmap.asImageBitmap() }
 
     Canvas(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color.Black)
             .pointerInput(Unit) {
                 detectTransformGestures { _, pan, zoom, _ ->
                     scale = (scale * zoom).coerceIn(0.5f, 5f)
@@ -418,36 +369,23 @@ private fun CaptureView(
                 }
             }
     ) {
-        // Apply transform
         val canvasW = size.width
         val canvasH = size.height
-        val imgAspect = bitmap.width.toFloat() / bitmap.height
-        val canvasAspect = canvasW / canvasH
 
-        val baseScale: Float
-        val baseOffsetX: Float
-        val baseOffsetY: Float
+        // Fit image to canvas
+        val fitScale = minOf(canvasW / bitmap.width, canvasH / bitmap.height)
+        val baseOffsetX = (canvasW - bitmap.width * fitScale) / 2f
+        val baseOffsetY = (canvasH - bitmap.height * fitScale) / 2f
 
-        if (imgAspect > canvasAspect) {
-            baseScale = canvasW / bitmap.width
-            baseOffsetX = 0f
-            baseOffsetY = (canvasH - bitmap.height * baseScale) / 2f
-        } else {
-            baseScale = canvasH / bitmap.height
-            baseOffsetX = (canvasW - bitmap.width * baseScale) / 2f
-            baseOffsetY = 0f
-        }
-
-        val totalScale = baseScale * scale
-        val totalOffsetX = baseOffsetX * scale + offsetX
-        val totalOffsetY = baseOffsetY * scale + offsetY
+        val totalScale = fitScale * scale
+        val totalOffsetX = baseOffsetX + offsetX
+        val totalOffsetY = baseOffsetY + offsetY
 
         // Draw bitmap
         drawImage(
             image = imageBitmap,
             dstOffset = androidx.compose.ui.unit.IntOffset(
-                totalOffsetX.toInt(),
-                totalOffsetY.toInt()
+                totalOffsetX.toInt(), totalOffsetY.toInt()
             ),
             dstSize = androidx.compose.ui.unit.IntSize(
                 (bitmap.width * totalScale).toInt(),
@@ -455,35 +393,55 @@ private fun CaptureView(
             )
         )
 
-        // Draw translated blocks
+        // Draw translations on top
+        // OCR coords are in bitmap space, so scale by totalScale
+        val ocrScaleX = totalScale
+        val ocrScaleY = totalScale
+
         for (block in blocks) {
             val box = block.boundingBox
-            val left = box.left * totalScale + totalOffsetX
-            val top = box.top * totalScale + totalOffsetY
-            val w = box.width() * totalScale
-            val h = box.height() * totalScale
+            if (box.width() < 20 || box.height() < 10) continue
 
-            drawRect(
-                color = Color.Black.copy(alpha = 0.65f),
-                topLeft = Offset(left, top),
-                size = Size(w, h)
-            )
+            val left = box.left * ocrScaleX + totalOffsetX
+            val top = box.top * ocrScaleY + totalOffsetY
+            val w = box.width() * ocrScaleX
+            val h = box.height() * ocrScaleY
 
-            val displayText = block.translatedText.ifBlank { block.originalText }
-            val fontSize = (h * 0.3f).coerceIn(8f, 28f)
+            val hasTranslation = block.translatedText.isNotBlank()
 
-            val layoutResult = textMeasurer.measure(
-                text = AnnotatedString(displayText),
-                style = TextStyle(
-                    color = Color.White,
-                    fontSize = fontSize.sp,
-                    lineHeight = (fontSize * 1.2f).sp
-                ),
-                constraints = androidx.compose.ui.unit.Constraints(
-                    maxWidth = w.toInt().coerceAtLeast(1)
+            if (hasTranslation) {
+                // Solid background to cover original text
+                drawRoundRect(
+                    color = Color(0xE6222222),
+                    topLeft = Offset(left, top),
+                    size = Size(w, h),
+                    cornerRadius = CornerRadius(4f)
                 )
-            )
-            drawText(layoutResult, topLeft = Offset(left + 2f, top + 2f))
+
+                // Translated text
+                val fontSize = (h * 0.35f).coerceIn(8f, 22f)
+                val layoutResult = textMeasurer.measure(
+                    text = AnnotatedString(block.translatedText),
+                    style = TextStyle(
+                        color = Color.White,
+                        fontSize = fontSize.sp,
+                        lineHeight = (fontSize * 1.15f).sp
+                    ),
+                    constraints = androidx.compose.ui.unit.Constraints(
+                        maxWidth = w.toInt().coerceAtLeast(1)
+                    )
+                )
+                drawText(layoutResult, topLeft = Offset(left + 4f, top + 2f))
+            } else {
+                // Not yet translated — just a border
+                drawRoundRect(
+                    color = Color(0xFF4FC3F7),
+                    topLeft = Offset(left, top),
+                    size = Size(w, h),
+                    cornerRadius = CornerRadius(4f),
+                    style = Stroke(width = 2f)
+                )
+            }
         }
     }
 }
