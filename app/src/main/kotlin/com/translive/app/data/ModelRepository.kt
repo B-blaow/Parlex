@@ -3,6 +3,8 @@ package com.translive.app.data
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
+import com.translive.app.data.model.ModelCatalog
+import com.translive.app.data.model.ModelFamily
 import com.translive.app.data.model.ModelVariant
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -34,12 +36,27 @@ class ModelRepository @Inject constructor(
     /** Get the download destination file */
     fun getDownloadFile(variant: ModelVariant): File = File(modelsDir, variant.filename)
 
-    /** Get the currently active model ID */
-    fun getActiveModelId(): String? = prefs.getString("active_model_id", null)
+    /** Get the currently active model ID, with migration from legacy non-namespaced IDs */
+    fun getActiveModelId(): String? {
+        val raw = prefs.getString("active_model_id", null) ?: return null
+        // Migrate legacy IDs: "q4_k_m" → "hy_mt:q4_k_m"
+        if (!raw.contains(":") && !raw.startsWith("custom")) {
+            val migrated = "hy_mt:$raw"
+            prefs.edit().putString("active_model_id", migrated).apply()
+            return migrated
+        }
+        return raw
+    }
 
     /** Set the active model */
     fun setActiveModelId(id: String) {
         prefs.edit().putString("active_model_id", id).apply()
+    }
+
+    /** Get the [ModelFamily] of the currently active model */
+    fun getActiveFamily(): ModelFamily? {
+        val variant = getActiveVariant() ?: return null
+        return ModelFamily.familyOf(variant)
     }
 
     /** Get the active model variant */

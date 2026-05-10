@@ -25,7 +25,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.translive.app.engine.DownloadState
+import com.translive.app.data.model.ModelFamily
 import com.translive.app.data.model.SttModelInfo
+import com.translive.app.ui.viewmodel.FamilyUiState
 import com.translive.app.ui.viewmodel.ModelItemState
 import com.translive.app.ui.viewmodel.ModelManagerViewModel
 import com.translive.app.ui.viewmodel.ModelStatus
@@ -140,7 +142,7 @@ fun ModelManagerScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "HY-MT1.5-1.8B • 12 квантизаций",
+                            text = "${uiState.families.size} семейств • ${uiState.families.sumOf { it.variants.size }} квантизаций",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -174,34 +176,51 @@ fun ModelManagerScreen(
                 }
             }
 
-            // Model cards
-            items(
-                uiState.models,
-                key = { it.variant.id },
-                contentType = { "model_card" }
-            ) { modelState ->
-                val variant = modelState.variant
-                val onDownload = remember(variant) { { viewModel.downloadModel(variant) } }
-                val onCancel = remember(variant) { { viewModel.cancelDownload(variant) } }
-                val onSelect = remember(variant) { { viewModel.selectModel(variant) } }
-                val onDelete = remember(variant) { { viewModel.deleteModel(variant) } }
-                val onExport = remember(variant) { {
-                    viewModel.startExport(variant)
-                    exportLauncher.launch(variant.filename)
-                } }
-                ModelCard(
-                    state = modelState,
-                    onDownload = onDownload,
-                    onCancel = onCancel,
-                    onSelect = onSelect,
-                    onDelete = onDelete,
-                    onExport = onExport,
-                    isExporting = uiState.isExporting,
-                    exportProgress = uiState.exportProgress,
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .animateItem()
-                )
+            // Family cards with expandable variants
+            uiState.families.forEach { familyState ->
+                item(
+                    key = "family_${familyState.family.id}",
+                    contentType = "family_header"
+                ) {
+                    FamilyHeader(
+                        familyState = familyState,
+                        onToggle = { viewModel.toggleFamily(familyState.family.id) },
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .animateItem()
+                    )
+                }
+
+                if (familyState.isExpanded) {
+                    items(
+                        familyState.variants,
+                        key = { it.variant.id },
+                        contentType = { "model_card" }
+                    ) { modelState ->
+                        val variant = modelState.variant
+                        val onDownload = remember(variant) { { viewModel.requestDownload(variant) } }
+                        val onCancel = remember(variant) { { viewModel.cancelDownload(variant) } }
+                        val onSelect = remember(variant) { { viewModel.selectModel(variant) } }
+                        val onDelete = remember(variant) { { viewModel.deleteModel(variant) } }
+                        val onExport = remember(variant) { {
+                            viewModel.startExport(variant)
+                            exportLauncher.launch(variant.filename)
+                        } }
+                        ModelCard(
+                            state = modelState,
+                            onDownload = onDownload,
+                            onCancel = onCancel,
+                            onSelect = onSelect,
+                            onDelete = onDelete,
+                            onExport = onExport,
+                            isExporting = uiState.isExporting,
+                            exportProgress = uiState.exportProgress,
+                            modifier = Modifier
+                                .padding(start = 32.dp, end = 16.dp, top = 2.dp, bottom = 2.dp)
+                                .animateItem()
+                        )
+                    }
+                }
             }
 
             // Import from file button
@@ -265,6 +284,132 @@ fun ModelManagerScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
             }
+        }
+    }
+
+    // Gemma license confirmation dialog
+    uiState.pendingLicenseVariant?.let { variant ->
+        val family = ModelFamily.familyOf(variant)
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissLicenseDialog() },
+            icon = { Icon(Icons.Outlined.Info, null) },
+            title = { Text("Лицензия ${family?.license?.displayName ?: ""}") },
+            text = {
+                Text(
+                    "Модель ${family?.name ?: variant.quantName} " +
+                    "распространяется на условиях ${family?.license?.displayName ?: ""}. " +
+                    "Скачивая, вы принимаете эти условия. Продолжить?"
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmLicenseAndDownload() }) {
+                    Text("Принять и скачать")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissLicenseDialog() }) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun FamilyHeader(
+    familyState: FamilyUiState,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val family = familyState.family
+    Card(
+        onClick = onToggle,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (familyState.hasActiveVariant)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+            else MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = family.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        if (family.isSpecialized) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
+                                modifier = Modifier.padding(start = 8.dp)
+                            ) {
+                                Text(
+                                    text = "Перевод",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        if (familyState.hasActiveVariant) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                modifier = Modifier.padding(start = 6.dp)
+                            ) {
+                                Text(
+                                    text = "✓ Активна",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "${family.developer} • ${family.parameterSize} • ${family.languageCount} яз.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (familyState.downloadedCount > 0) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        modifier = Modifier.padding(end = 4.dp)
+                    ) {
+                        Text(
+                            text = "${familyState.downloadedCount}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                Icon(
+                    if (familyState.isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    contentDescription = if (familyState.isExpanded) "Свернуть" else "Развернуть",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "${family.description} • ${family.license.displayName}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

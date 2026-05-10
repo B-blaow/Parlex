@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.translive.app.data.ModelRepository
 import com.translive.app.data.SettingsRepository
+import com.translive.app.data.model.ModelCatalog
+import com.translive.app.data.model.ModelFamily
 import com.translive.app.data.model.ModelVariant
 import com.translive.app.data.model.SttModelInfo
 import com.translive.app.engine.DownloadState
@@ -39,7 +41,18 @@ data class ModelItemState(
     val downloadState: DownloadState = DownloadState.Idle
 )
 
+data class FamilyUiState(
+    val family: ModelFamily,
+    val isExpanded: Boolean = false,
+    val variants: List<ModelItemState> = emptyList(),
+    /** Number of downloaded variants in this family */
+    val downloadedCount: Int = 0,
+    /** True if the active model belongs to this family */
+    val hasActiveVariant: Boolean = false
+)
+
 data class ModelManagerUiState(
+    val families: List<FamilyUiState> = emptyList(),
     val models: List<ModelItemState> = emptyList(),
     val totalDownloadedSize: Long = 0L,
     val availableSpace: Long = 0L,
@@ -52,7 +65,9 @@ data class ModelManagerUiState(
     val sttDownloading: Boolean = false,
     val sttProgress: Float = 0f,
     val error: String? = null,
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    /** Variant pending license confirmation before download */
+    val pendingLicenseVariant: ModelVariant? = null
 )
 
 @HiltViewModel
@@ -87,34 +102,41 @@ class ModelManagerViewModel @Inject constructor(
     }
 
     private fun updateDownloadStates(downloads: Map<String, DownloadState>) {
-        // Update GGUF model states
         val activeId = repo.getActiveModelId()
-        val models = ModelVariant.ALL.map { variant ->
-            val isDownloaded = repo.isDownloaded(variant)
-            val isActive = variant.id == activeId && isDownloaded
-            val downloadState = downloads[variant.id]
+        val expandedIds = _uiState.value.families.filter { it.isExpanded }.map { it.family.id }.toSet()
 
-            val status = when {
-                isActive -> ModelStatus.ACTIVE
-                downloadState is DownloadState.Downloading -> ModelStatus.DOWNLOADING
-                isDownloaded -> ModelStatus.DOWNLOADED
-                else -> ModelStatus.NOT_DOWNLOADED
+        val families = ModelCatalog.ALL_FAMILIES.map { family ->
+            val variantStates = family.variants.map { variant ->
+                val isDownloaded = repo.isDownloaded(variant)
+                val isActive = variant.id == activeId && isDownloaded
+                val downloadState = downloads[variant.id]
+                val status = when {
+                    isActive -> ModelStatus.ACTIVE
+                    downloadState is DownloadState.Downloading -> ModelStatus.DOWNLOADING
+                    isDownloaded -> ModelStatus.DOWNLOADED
+                    else -> ModelStatus.NOT_DOWNLOADED
+                }
+                ModelItemState(variant, status, downloadState ?: DownloadState.Idle)
             }
-
-            ModelItemState(
-                variant = variant,
-                status = status,
-                downloadState = downloadState ?: DownloadState.Idle
+            FamilyUiState(
+                family = family,
+                isExpanded = family.id in expandedIds,
+                variants = variantStates,
+                downloadedCount = variantStates.count { it.status == ModelStatus.DOWNLOADED || it.status == ModelStatus.ACTIVE },
+                hasActiveVariant = variantStates.any { it.status == ModelStatus.ACTIVE }
             )
         }
 
-        // Update TTS/STT progress from download states
+        // Flat list for backward compat
+        val allModels = families.flatMap { it.variants }
+
         val sttVadState = downloads["stt-vad"]
         val sttWhisperState = downloads["stt-whisper"]
 
         _uiState.update { old ->
             old.copy(
-                models = models,
+                families = families,
+                models = allModels,
                 totalDownloadedSize = repo.getTotalDownloadedSize(),
                 availableSpace = repo.getAvailableSpace(),
                 sttDownloaded = speechEngine.areModelsDownloaded(),
@@ -133,6 +155,36 @@ class ModelManagerViewModel @Inject constructor(
 
     fun refreshModels() {
         updateDownloadStates(downloadManager.activeDownloads.value)
+    }
+
+    fun toggleFamily(familyId: String) {
+        _uiState.update { old ->
+            old.copy(
+                families = old.families.map { f ->
+                    if (f.family.id == familyId) f.copy(isExpanded = !f.isExpanded) else f
+                }
+            )
+        }
+    }
+
+    /** Request download — shows license dialog if needed */
+    fun requestDownload(variant: ModelVariant) {
+        val family = ModelFamily.familyOf(variant)
+        if (family != null && family.requiresLicenseConfirmation) {
+            _uiState.update { it.copy(pendingLicenseVariant = variant) }
+        } else {
+            downloadModel(variant)
+        }
+    }
+
+    fun confirmLicenseAndDownload() {
+        val variant = _uiState.value.pendingLicenseVariant ?: return
+        _uiState.update { it.copy(pendingLicenseVariant = null) }
+        downloadModel(variant)
+    }
+
+    fun dismissLicenseDialog() {
+        _uiState.update { it.copy(pendingLicenseVariant = null) }
     }
 
     fun downloadModel(variant: ModelVariant) {
