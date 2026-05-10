@@ -1,19 +1,25 @@
 package com.translive.app.engine
 
+import com.translive.app.data.ModelRepository
 import com.translive.app.data.model.Language
+import com.translive.app.data.model.PromptStyle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * JNI bridge to llama.cpp for Hy-MT1.5-1.8B GGUF inference.
+ * JNI bridge to llama.cpp for GGUF model inference.
+ * Supports multiple model families with per-family prompt templates.
  * Native implementation in src/main/cpp/translive_jni.cpp
  *
  * IMPORTANT: llama.cpp is NOT thread-safe. All native calls are
  * serialized through [inferenceMutex]. Never call native methods directly.
  */
 class TranslationEngine {
+
+    /** Set by DI after construction — used to determine active model's prompt style. */
+    var modelRepository: ModelRepository? = null
 
     /** Mutex to serialize all native calls — llama.cpp is not thread-safe. */
     val inferenceMutex = Mutex()
@@ -133,11 +139,34 @@ class TranslationEngine {
     }
 
     private fun buildPrompt(text: String, source: Language, target: Language): String {
+        val style = modelRepository?.getActiveFamily()?.promptStyle ?: PromptStyle.HY_MT
+        return when (style) {
+            PromptStyle.HY_MT -> buildHyMtPrompt(text, source, target)
+            PromptStyle.TRANSLATE_GEMMA -> buildTranslateGemmaPrompt(text, source, target)
+            PromptStyle.GENERIC_TRANSLATE -> buildGenericPrompt(text, source, target)
+        }
+    }
+
+    /** HY-MT: Chinese prompt for zh pairs, English for others */
+    private fun buildHyMtPrompt(text: String, source: Language, target: Language): String {
         val isChinese = source.code.startsWith("zh") || target.code.startsWith("zh")
         return if (isChinese) {
             "将以下文本翻译为${target.nativeName}，注意只需要输出翻译后的结果，不要额外解释：\n$text"
         } else {
             "Translate the following segment into ${target.displayName}, without additional explanation.\n$text"
         }
+    }
+
+    /** TranslateGemma: Google's recommended prompt format */
+    private fun buildTranslateGemmaPrompt(text: String, source: Language, target: Language): String {
+        return "Translate the following text from ${source.displayName} to ${target.displayName}.\n" +
+               "${source.displayName}: $text\n" +
+               "${target.displayName}:"
+    }
+
+    /** Generic: works with Qwen3, Gemma 4, Tiny Aya, Phi-4, etc. */
+    private fun buildGenericPrompt(text: String, source: Language, target: Language): String {
+        return "Translate the following text from ${source.displayName} into ${target.displayName}. " +
+               "Output only the translation, no explanations.\n\n$text"
     }
 }

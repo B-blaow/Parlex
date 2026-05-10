@@ -2,6 +2,7 @@ package com.translive.app.di
 
 import android.content.Context
 import androidx.room.Room
+import com.translive.app.data.ModelRepository
 import com.translive.app.data.db.DialogueDao
 import com.translive.app.data.db.TransLiveDatabase
 import com.translive.app.data.db.TranslationDao
@@ -35,5 +36,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideTranslationEngine(): TranslationEngine = TranslationEngine()
+    fun provideTranslationEngine(modelRepository: ModelRepository): TranslationEngine {
+        return TranslationEngine().also { it.modelRepository = modelRepository }
+    }
 }
