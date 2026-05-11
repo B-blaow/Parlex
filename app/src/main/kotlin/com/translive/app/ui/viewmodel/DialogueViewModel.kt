@@ -88,6 +88,26 @@ class DialogueViewModel @Inject constructor(
                 )
             }
         }
+
+        // Observe SpeechEngine state to show RECOGNIZING phase in UI
+        viewModelScope.launch {
+            speechEngine.state.collect { sttState ->
+                if (!_uiState.value.isConversationActive) return@collect
+                when (sttState) {
+                    ListeningState.PROCESSING -> _uiState.update {
+                        it.copy(phase = DialoguePhase.RECOGNIZING)
+                    }
+                    ListeningState.LISTENING -> {
+                        // Only reset to LISTENING if currently RECOGNIZING
+                        // (don't override TRANSLATING or SPEAKING phases)
+                        if (_uiState.value.phase == DialoguePhase.RECOGNIZING) {
+                            _uiState.update { it.copy(phase = DialoguePhase.LISTENING) }
+                        }
+                    }
+                    else -> { /* ignore IDLE, ERROR */ }
+                }
+            }
+        }
     }
 
     fun setMicPermission(granted: Boolean) {

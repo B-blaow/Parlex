@@ -142,6 +142,7 @@ class SpeechEngine @Inject constructor(
                     threshold = 0.5f,
                     minSilenceDuration = 0.5f,
                     minSpeechDuration = 0.25f,
+                    maxSpeechDuration = 15.0f,  // Allow longer phrases (default 5s is too short)
                     windowSize = 512
                 )
                 val vadConfig = VadModelConfig(
