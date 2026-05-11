@@ -9,9 +9,7 @@ enum class PromptStyle {
     /** HY-MT specific: Chinese prompt for zh pairs, English for others */
     HY_MT,
     /** TranslateGemma: Google's specialized translation prompt */
-    TRANSLATE_GEMMA,
-    /** Generic: standard "Translate X into Y" prompt, works with most chat models */
-    GENERIC_TRANSLATE
+    TRANSLATE_GEMMA
 }
 
 /**
@@ -20,10 +18,7 @@ enum class PromptStyle {
  */
 enum class ModelLicense(val displayName: String) {
     APACHE_2("Apache 2.0"),
-    MIT("MIT"),
-    GEMMA_TOU("Gemma Terms of Use"),
-    LLAMA_COMMUNITY("Llama Community License"),
-    CC_BY_NC("CC-BY-NC 4.0")
+    GEMMA_TOU("Gemma Terms of Use")
 }
 
 /**

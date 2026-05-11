@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22.1)
+cmake_minimum_required(VERSION 3.14)
 project("translive" LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -14,6 +14,7 @@ if(EXISTS "${LLAMA_CPP_DIR}/CMakeLists.txt")
     set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(LLAMA_BUILD_SERVER OFF CACHE BOOL "" FORCE)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(GGML_OPENMP OFF CACHE BOOL "" FORCE)  # pthreads > OpenMP on Android
     add_subdirectory(${LLAMA_CPP_DIR} llama.cpp)
 
     # Our JNI bridge library

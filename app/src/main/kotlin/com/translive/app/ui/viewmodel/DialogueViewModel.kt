@@ -172,8 +172,8 @@ class DialogueViewModel @Inject constructor(
                     }
                 }
 
-                // 2. Initialize STT with source language for better recognition
-                val sourceLang = _uiState.value.sourceLanguage.code
+                // 2. Initialize STT with auto-detect for bidirectional dialogue
+                // Whisper needs to recognize both languages (e.g. Russian AND English)
                 if (!speechEngine.areModelsDownloaded()) {
                     _uiState.update {
                         it.copy(
@@ -184,7 +184,7 @@ class DialogueViewModel @Inject constructor(
                     }
                     return@launch
                 }
-                val ok = speechEngine.initialize(sourceLang)
+                val ok = speechEngine.initialize("")  // Auto-detect for bidirectional
                 if (!ok) {
                     _uiState.update {
                         it.copy(
@@ -250,10 +250,21 @@ class DialogueViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val state = _uiState.value
-                // Always translate from selected source → target
-                // User controls direction via the language picker
-                val fromLang = state.sourceLanguage
-                val toLang = state.targetLanguage
+
+                // Bidirectional: detect spoken language and translate to the other
+                val detectedLang = Language.fromCode(result.language)
+                val fromLang: Language
+                val toLang: Language
+
+                if (detectedLang != null && detectedLang.code == state.targetLanguage.code) {
+                    // Speaker B: spoke in target language → translate to source
+                    fromLang = state.targetLanguage
+                    toLang = state.sourceLanguage
+                } else {
+                    // Speaker A (default): spoke in source language → translate to target
+                    fromLang = state.sourceLanguage
+                    toLang = state.targetLanguage
+                }
 
                 val translated = engine.translateSafe(
                     sourceText = result.text,

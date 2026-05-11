@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Офлайн AI-переводчик для Android</strong><br>
-  <sub>33 языка • 1 056 направлений • 100% без интернета • Голосовой диалог</sub>
+  <sub>33 языка • 1 056 направлений • 100% без интернета • Двунаправленный голосовой диалог</sub>
 </p>
 
 <p align="center">
@@ -14,14 +14,15 @@
   <a href="#"><img src="https://img.shields.io/badge/API-26+-brightgreen" /></a>
   <a href="#"><img src="https://img.shields.io/badge/Arch-arm64--v8a-blue" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/Version-1.0.0-orange" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/Version-1.3.0-orange" /></a>
 </p>
 
 <p align="center">
   <a href="#"><img src="https://img.shields.io/badge/Model-Tencent_Hy--MT_1.5_1.8B-red?logo=huggingface&logoColor=white" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/Model-Google_TranslateGemma_4B-blue?logo=google&logoColor=white" /></a>
   <a href="#"><img src="https://img.shields.io/badge/Engine-llama.cpp-black?logo=c%2B%2B&logoColor=white" /></a>
   <a href="#"><img src="https://img.shields.io/badge/STT-Whisper_Tiny-purple" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/TTS-Kokoro_(Sherpa--ONNX)-pink" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/TTS-System_TTS-pink" /></a>
 </p>
 
 ---
@@ -33,11 +34,11 @@
 | 🌍 | **33 языка** | Все комбинации — 1 056 направлений перевода |
 | ⚡ | **Быстро** | ~1 сек на предложение (Snapdragon 865+) |
 | 🔒 | **Офлайн** | Нет сети — нет утечки данных |
-| 🎙️ | **Голосовой диалог** | Два человека говорят — приложение переводит в реальном времени |
-| 🔊 | **Озвучка** | Перевод читается вслух (Kokoro TTS) |
+| 🎙️ | **Голосовой диалог** | Двунаправленный: говорите на любом из двух языков — приложение автоматически определяет и переводит |
+| 🔊 | **Озвучка** | Перевод читается вслух (System TTS) |
 | 📝 | **История** | Полная история переводов с поиском, фильтрами и избранным |
 | ⭐ | **Избранное** | Отмечай важные переводы для быстрого доступа |
-| 📦 | **Менеджер моделей** | 12 квантизаций Hy-MT — от 2-bit (574 МБ) до F16 (3.6 ГБ) |
+| 📦 | **Менеджер моделей** | 2 семейства моделей: Tencent Hy-MT (12 квантизаций) + Google TranslateGemma (5 квантизаций) |
 | ⚙️ | **Настройки** | Потоки CPU, бэкенд, авто-выгрузка модели |
 
 ---
@@ -56,11 +57,11 @@
 ├─────────────────────────────────────────────────┤
 │            Translation Engine (JNI)             │
 │     ┌──────────┐  ┌──────────┐  ┌───────────┐  │
-│     │ llama.cpp│  │Whisper   │  │Sherpa-ONNX│  │
-│     │ (GGUF)   │  │(STT/VAD) │  │(Kokoro TTS│  │
+│     │ llama.cpp│  │Whisper   │  │System TTS │  │
+│     │ (GGUF)   │  │(STT/VAD) │  │(Android)  │  │
 │     └──────────┘  └──────────┘  └───────────┘  │
 ├─────────────────────────────────────────────────┤
-│               ARM NEON (arm64-v8a)              │
+│      ARM NEON (arm64-v8a) • Flash Attention     │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -71,20 +72,30 @@
 | Компонент | Технология |
 |:--|:--|
 | **UI** | Kotlin + Jetpack Compose (Material 3, Dynamic Color) |
-| **Навигация** | 5 вкладок: Текст · Диалог · История · Модели · Настройки |
+| **Навигация** | 4 вкладки: Текст · Диалог · Модели · Настройки |
 | **Перевод** | [llama.cpp](https://github.com/ggerganov/llama.cpp) — GGUF модели через JNI |
-| **Модель** | [Tencent Hy-MT 1.5 1.8B](https://huggingface.co/tencent/Hy-MT1.5-1.8B) — 12 вариантов квантизации |
+| **Модели** | [Tencent Hy-MT 1.5 1.8B](https://huggingface.co/tencent/Hy-MT1.5-1.8B) + [Google TranslateGemma 4B](https://huggingface.co/google/translate-gemma-4b-it) |
 | **Распознавание речи** | Whisper Tiny (Sherpa-ONNX) + Silero VAD v5 |
-| **Синтез речи** | Kokoro TTS (Sherpa-ONNX) |
+| **Синтез речи** | Android System TTS |
 | **Хранение** | Room DB — история, сессии, избранное |
 | **DI** | Dagger Hilt |
-| **Сборка** | Gradle 8.11 + CMake 3.22 + NDK 27.2 |
+| **Сборка** | Gradle 8.11 + CMake 3.14 + NDK r27d LTS |
+
+### Нативный стек
+
+| Параметр | Значение |
+|:--|:--|
+| **Sampling** | Official HY-MT: temp=0.7, top_k=20, top_p=0.6, rep_penalty=1.05 |
+| **Flash Attention** | ✅ Включён |
+| **mmap** | ✅ Включён |
+| **OpenMP** | ❌ Отключён (pthreads, стабильнее на Android) |
+| **Thread clamp** | Автоматический к performance cores |
 
 ---
 
-## 📦 Квантизации моделей
+## 📦 Модели перевода
 
-Приложение поддерживает скачивание и переключение между 12 вариантами модели:
+### Tencent Hy-MT 1.5 1.8B — 33 языка
 
 | Квантизация | Размер | RAM | Качество |
 |:--|:--|:--|:--|
@@ -100,6 +111,10 @@
 | Q8_0 | ~1.9 ГБ | ~2.4 ГБ | ★★★★★ |
 | F16 | ~3.6 ГБ | ~4.1 ГБ | ★★★★★ |
 | BF16 | ~3.6 ГБ | ~4.1 ГБ | ★★★★★ |
+
+### Google TranslateGemma 4B — 5 вариантов
+
+Специализированная модель перевода от Google (Gemma 3 architecture).
 
 ---
 
@@ -155,8 +170,8 @@
 ### Требования
 
 - Android Studio Ladybug 2024.2+
-- Android SDK 35 + NDK 27.2.12479018
-- CMake 3.22.1
+- Android SDK 35 + NDK r27d (27.3.13750724)
+- CMake 3.14+
 - Устройство: `arm64-v8a`, Android 8.0+ (API 26)
 
 ### 1. Клонирование
@@ -172,28 +187,22 @@ cd Parlex
 # llama.cpp (перевод)
 cd app/src/main/cpp
 git clone --depth 1 https://github.com/ggerganov/llama.cpp.git
-
-# whisper.cpp (распознавание речи) — если ещё нет
-git clone --depth 1 https://github.com/ggerganov/whisper.cpp.git
 cd ../../../..
 ```
 
 ### 3. Сборка
 
 ```bash
-# Через Gradle
-./gradlew assembleDebug
-
-# Или откройте в Android Studio → Sync → Build
+./gradlew assembleRelease
 ```
 
 ### 4. Установка
 
 ```bash
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-> **Примечание:** Модели скачиваются внутри приложения через встроенный менеджер моделей. Не нужно ничего пушить вручную.
+> **Примечание:** Модели скачиваются внутри приложения через встроенный менеджер моделей.
 
 ---
 
@@ -202,9 +211,8 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 | Экран | Описание |
 |:--|:--|
 | **Текст** | Ввод текста → мгновенный офлайн-перевод с кнопкой озвучки |
-| **Диалог** | Голосовой режим: два человека говорят на разных языках |
-| **История** | Все переводы / ⭐ Избранное / 🎤 Голосовые сессии |
-| **Модели** | Скачивание, выбор и удаление моделей + TTS/STT |
+| **Диалог** | Двунаправленный голосовой режим: говорите на любом из двух выбранных языков |
+| **Модели** | Скачивание, выбор и удаление моделей (HY-MT + TranslateGemma) |
 | **Настройки** | CPU потоки (1-8), бэкенд, таймаут авто-выгрузки |
 
 ---
@@ -221,19 +229,19 @@ app/src/main/
 │   │   └── SettingsRepository # SharedPreferences
 │   ├── di/                  # Hilt DI module
 │   ├── engine/
-│   │   ├── TranslationEngine # JNI → llama.cpp
-│   │   ├── SpeechEngine      # Whisper + Silero VAD
-│   │   ├── TtsEngine          # Kokoro TTS
+│   │   ├── TranslationEngine # JNI → llama.cpp (official HY-MT params)
+│   │   ├── SpeechEngine      # Whisper + Silero VAD (auto-detect)
+│   │   ├── SystemTtsEngine   # Android System TTS
 │   │   └── ModelDownloadManager
 │   └── ui/
-│       ├── screens/         # 5 Compose screens
-│       ├── viewmodel/       # ViewModels (Translation, Dialogue, History, ModelManager, Settings)
+│       ├── screens/         # Compose screens
+│       ├── viewmodel/       # ViewModels
 │       ├── components/      # LanguagePicker, etc.
 │       └── TransLiveNavHost # Navigation graph
 ├── cpp/
-│   ├── translive_jni.cpp    # JNI bridge
-│   ├── llama.cpp/           # git submodule (не в репозитории)
-│   └── whisper.cpp/         # git submodule (не в репозитории)
+│   ├── translive_jni.cpp    # JNI bridge (sampling, chat template)
+│   ├── CMakeLists.txt       # NDK r27d, Flash Attention, OpenMP off
+│   └── llama.cpp/           # git submodule (не в репозитории)
 └── res/
     ├── mipmap-*/            # App icons
     ├── drawable/            # Splash screen

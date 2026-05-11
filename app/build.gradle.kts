@@ -18,14 +18,14 @@ if (keystoreFile.exists()) {
 android {
     namespace = "com.translive.app"
     compileSdk = 35
-    ndkVersion = "27.2.12479018"
+    ndkVersion = "27.3.13750724"
 
     defaultConfig {
         applicationId = "com.translive.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.2.0"
+        versionCode = 5
+        versionName = "1.3.0"
 
         ndk {
             abiFilters += listOf("arm64-v8a")
