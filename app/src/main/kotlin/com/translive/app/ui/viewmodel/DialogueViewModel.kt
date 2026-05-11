@@ -152,29 +152,28 @@ class DialogueViewModel @Inject constructor(
                     }
                 }
 
-                // 2. Initialize STT with file integrity validation
-                if (!speechEngine.isReady.value) {
-                    if (!speechEngine.areModelsDownloaded()) {
-                        _uiState.update {
-                            it.copy(
-                                isConversationActive = false,
-                                phase = DialoguePhase.ERROR,
-                                error = "STT модели не загружены или повреждены. Переустановите в разделе Модели."
-                            )
-                        }
-                        return@launch
+                // 2. Initialize STT with source language for better recognition
+                val sourceLang = _uiState.value.sourceLanguage.code
+                if (!speechEngine.areModelsDownloaded()) {
+                    _uiState.update {
+                        it.copy(
+                            isConversationActive = false,
+                            phase = DialoguePhase.ERROR,
+                            error = "STT модели не загружены или повреждены. Переустановите в разделе Модели."
+                        )
                     }
-                    val ok = speechEngine.initialize()
-                    if (!ok) {
-                        _uiState.update {
-                            it.copy(
-                                isConversationActive = false,
-                                phase = DialoguePhase.ERROR,
-                                error = "Не удалось инициализировать STT. Модели повреждены — переустановите."
-                            )
-                        }
-                        return@launch
+                    return@launch
+                }
+                val ok = speechEngine.initialize(sourceLang)
+                if (!ok) {
+                    _uiState.update {
+                        it.copy(
+                            isConversationActive = false,
+                            phase = DialoguePhase.ERROR,
+                            error = "Не удалось инициализировать STT. Модели повреждены — переустановите."
+                        )
                     }
+                    return@launch
                 }
 
                 // 3. Create a Room session

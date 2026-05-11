@@ -41,12 +41,14 @@ class SpeechEngine @Inject constructor(
     companion object {
         private const val TAG = "SpeechEngine"
         private const val SAMPLE_RATE = 16000
+        private const val AUDIO_GAIN = 2.0f  // Microphone gain boost for better recognition
     }
 
     private var vad: Vad? = null
     private var recognizer: OfflineRecognizer? = null
     private var audioRecord: AudioRecord? = null
     private var listenJob: Job? = null
+    private var currentLanguage: String = ""  // current Whisper language
 
     private val _state = MutableStateFlow(ListeningState.IDLE)
     val state: StateFlow<ListeningState> = _state.asStateFlow()
@@ -73,35 +75,90 @@ class SpeechEngine @Inject constructor(
 
     fun areModelsDownloaded(): Boolean = isVadDownloaded() && isWhisperDownloaded()
 
-    fun initialize(): Boolean {
+    /**
+     * Validate ONNX files have correct protobuf header.
+     * ONNX model protobuf starts with field tag 0x08 (ir_version).
+     * If header is wrong, the file is corrupt and sherpa-onnx will SIGABRT.
+     */
+    private fun validateOnnxFiles(): Boolean {
+        return try {
+            val files = listOf(
+                File(whisperDir, "tiny-encoder.onnx"),
+                File(whisperDir, "tiny-decoder.onnx")
+            )
+            for (f in files) {
+                if (!f.exists()) return false
+                f.inputStream().use { stream ->
+                    val header = ByteArray(4)
+                    val read = stream.read(header)
+                    // ONNX protobuf starts with 0x08 (varint field 1 = ir_version)
+                    if (read < 4 || header[0] != 0x08.toByte()) {
+                        Log.e(TAG, "Corrupt ONNX: ${f.name} header=${header.take(4).map { "%02x".format(it) }}")
+                        return false
+                    }
+                }
+            }
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "ONNX validation error: ${e.message}")
+            false
+        }
+    }
+
+    /** Delete corrupt whisper model files to trigger redownload */
+    private fun deleteWhisperModels() {
+        whisperDir.deleteRecursively()
+        Log.i(TAG, "Deleted whisper models for redownload")
+    }
+
+    fun initialize(language: String = ""): Boolean {
+        // If language changed, recreate recognizer
+        if (recognizer != null && language != currentLanguage) {
+            Log.i(TAG, "Language changed: $currentLanguage → $language, recreating recognizer")
+            recognizer?.release()
+            recognizer = null
+            _isReady.value = false
+        }
+
         if (vad != null && recognizer != null) return true
         if (!areModelsDownloaded()) return false
+
+        // Validate ONNX file integrity before loading — sherpa-onnx fatally aborts (SIGABRT)
+        // on corrupt files, which cannot be caught by try-catch
+        if (!validateOnnxFiles()) {
+            Log.e(TAG, "ONNX files corrupt — deleting for redownload")
+            deleteWhisperModels()
+            return false
+        }
 
         return try {
             // Models are on disk (not in APK assets), so pass null for assetManager.
             // Sherpa-ONNX fatally crashes if assetManager is non-null with absolute paths.
 
-            // Initialize VAD
-            val sileroConfig = SileroVadModelConfig(
-                model = vadFile.absolutePath,
-                threshold = 0.5f,
-                minSilenceDuration = 0.5f,
-                minSpeechDuration = 0.25f,
-                windowSize = 512
-            )
-            val vadConfig = VadModelConfig(
-                sileroVadModelConfig = sileroConfig,
-                sampleRate = SAMPLE_RATE,
-                numThreads = 1
-            )
-            vad = Vad(null, vadConfig)
+            // Initialize VAD (only if not already created)
+            if (vad == null) {
+                val sileroConfig = SileroVadModelConfig(
+                    model = vadFile.absolutePath,
+                    threshold = 0.5f,
+                    minSilenceDuration = 0.5f,
+                    minSpeechDuration = 0.25f,
+                    windowSize = 512
+                )
+                val vadConfig = VadModelConfig(
+                    sileroVadModelConfig = sileroConfig,
+                    sampleRate = SAMPLE_RATE,
+                    numThreads = 1
+                )
+                vad = Vad(null, vadConfig)
+            }
 
-            // Initialize Whisper (non-streaming / offline)
+            // Initialize Whisper with explicit language
             val wDir = whisperDir.absolutePath
+            val whisperLang = language.take(2)  // "ru", "en", "zh" etc.
             val whisperModelConfig = OfflineWhisperModelConfig(
                 encoder = "$wDir/tiny-encoder.onnx",
                 decoder = "$wDir/tiny-decoder.onnx",
-                language = "",  // Empty = auto-detect
+                language = whisperLang,  // Explicit language for better accuracy
                 task = "transcribe"
             )
             val modelConfig = OfflineModelConfig(
@@ -115,8 +172,9 @@ class SpeechEngine @Inject constructor(
             )
             recognizer = OfflineRecognizer(null, recConfig)
 
+            currentLanguage = language
             _isReady.value = true
-            Log.i(TAG, "SpeechEngine initialized (VAD + Whisper)")
+            Log.i(TAG, "SpeechEngine initialized (VAD + Whisper, lang=$whisperLang)")
             true
         } catch (e: Throwable) {
             // Catch Throwable to handle both Exception and Error (e.g. UnsatisfiedLinkError)
@@ -175,8 +233,10 @@ class SpeechEngine @Inject constructor(
                 val read = audioRecord?.read(shortBuffer, 0, chunkSize) ?: -1
                 if (read <= 0) continue
 
-                // Convert short to float [-1, 1]
-                val floatBuffer = FloatArray(read) { shortBuffer[it] / 32768.0f }
+                // Convert short to float [-1, 1] with gain boost
+                val floatBuffer = FloatArray(read) {
+                    (shortBuffer[it] / 32768.0f * AUDIO_GAIN).coerceIn(-1.0f, 1.0f)
+                }
 
                 // Feed to VAD
                 vad?.acceptWaveform(floatBuffer)
@@ -211,7 +271,7 @@ class SpeechEngine @Inject constructor(
             rec.decode(stream)
             val text = rec.getResult(stream).text.trim()
 
-            if (text.isBlank()) return null
+            if (text.isBlank() || text.length < 3) return null  // Filter noise/short artifacts
 
             val language = detectLanguage(text)
             SpeechResult(text = text, language = language)
