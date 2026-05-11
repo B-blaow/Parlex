@@ -30,42 +30,52 @@ struct TransLiveContext {
 // ─── Helpers ──────────────────────────────────────────────────────────
 
 /**
- * Apply chat template and tokenize prompt into token vector.
+ * Tokenize prompt into token vector.
+ * If useChatTemplate is true, wraps prompt in model's chat template first.
+ * If false, tokenizes the raw prompt directly (for models like TranslateGemma
+ * whose prompt format already contains structured output markers).
  * Returns number of tokens, or -1 on failure.
  */
 static int tokenize_prompt(TransLiveContext* tlctx, const std::string& prompt,
-                           std::vector<llama_token>& out_tokens) {
-    // Wrap prompt in chat template
-    std::vector<llama_chat_message> messages = {
-        {"user", prompt.c_str()}
-    };
+                           std::vector<llama_token>& out_tokens, bool useChatTemplate) {
+    std::string finalPrompt;
 
-    std::vector<char> formatted(prompt.size() * 2 + 256);
-    int len = llama_chat_apply_template(
-        llama_model_chat_template(tlctx->model, nullptr),
-        messages.data(), messages.size(),
-        true, formatted.data(), formatted.size()
-    );
-    if (len < 0 || (size_t)len >= formatted.size()) {
-        formatted.resize(len + 1);
-        len = llama_chat_apply_template(
+    if (useChatTemplate) {
+        // Wrap prompt in chat template (HY-MT, etc.)
+        std::vector<llama_chat_message> messages = {
+            {"user", prompt.c_str()}
+        };
+
+        std::vector<char> formatted(prompt.size() * 2 + 256);
+        int len = llama_chat_apply_template(
             llama_model_chat_template(tlctx->model, nullptr),
             messages.data(), messages.size(),
             true, formatted.data(), formatted.size()
         );
+        if (len < 0 || (size_t)len >= formatted.size()) {
+            formatted.resize(len + 1);
+            len = llama_chat_apply_template(
+                llama_model_chat_template(tlctx->model, nullptr),
+                messages.data(), messages.size(),
+                true, formatted.data(), formatted.size()
+            );
+        }
+        finalPrompt = std::string(formatted.data(), len);
+    } else {
+        // Raw prompt — no chat template wrapping
+        finalPrompt = prompt;
     }
-    std::string formattedPrompt(formatted.data(), len);
 
     // Tokenize
-    out_tokens.resize(formattedPrompt.size() + 64);
+    out_tokens.resize(finalPrompt.size() + 64);
     int n_tokens = llama_tokenize(
-        tlctx->vocab, formattedPrompt.c_str(), formattedPrompt.size(),
+        tlctx->vocab, finalPrompt.c_str(), finalPrompt.size(),
         out_tokens.data(), out_tokens.size(), true, true
     );
     if (n_tokens < 0) {
         out_tokens.resize(-n_tokens);
         n_tokens = llama_tokenize(
-            tlctx->vocab, formattedPrompt.c_str(), formattedPrompt.size(),
+            tlctx->vocab, finalPrompt.c_str(), finalPrompt.size(),
             out_tokens.data(), out_tokens.size(), true, true
         );
     }
@@ -165,7 +175,8 @@ Java_com_translive_app_engine_TranslationEngine_nativeLoadModel(
 
 JNIEXPORT jstring JNICALL
 Java_com_translive_app_engine_TranslationEngine_nativeTranslate(
-    JNIEnv* env, jobject /*thiz*/, jlong contextPtr, jstring prompt, jint maxTokens) {
+    JNIEnv* env, jobject /*thiz*/, jlong contextPtr, jstring prompt,
+    jint maxTokens, jboolean useChatTemplate) {
 
     auto* tlctx = reinterpret_cast<TransLiveContext*>(contextPtr);
     if (!tlctx || !tlctx->ctx) {
@@ -178,7 +189,7 @@ Java_com_translive_app_engine_TranslationEngine_nativeTranslate(
 
     // Tokenize + prefill
     std::vector<llama_token> tokens;
-    tokenize_prompt(tlctx, promptCpp, tokens);
+    tokenize_prompt(tlctx, promptCpp, tokens, useChatTemplate);
 
     if (prefill_prompt(tlctx, tokens) != 0) {
         return env->NewStringUTF("[Error: decode failed]");
@@ -215,7 +226,7 @@ Java_com_translive_app_engine_TranslationEngine_nativeTranslate(
 JNIEXPORT jintArray JNICALL
 Java_com_translive_app_engine_TranslationEngine_nativeTranslateStreaming(
     JNIEnv* env, jobject /*thiz*/, jlong contextPtr, jstring prompt,
-    jint maxTokens, jobject callback) {
+    jint maxTokens, jboolean useChatTemplate, jobject callback) {
 
     auto* tlctx = reinterpret_cast<TransLiveContext*>(contextPtr);
 
@@ -236,7 +247,7 @@ Java_com_translive_app_engine_TranslationEngine_nativeTranslateStreaming(
 
     // Tokenize + prefill
     std::vector<llama_token> tokens;
-    counts[0] = tokenize_prompt(tlctx, promptCpp, tokens);
+    counts[0] = tokenize_prompt(tlctx, promptCpp, tokens, useChatTemplate);
 
     if (prefill_prompt(tlctx, tokens) != 0) {
         jintArray arr = env->NewIntArray(2);

@@ -48,11 +48,14 @@ class TranslationEngine {
     private external fun nativeLoadModel(modelPath: String, nThreads: Int): Long
 
     /** Run translation inference. Returns translated text. */
-    private external fun nativeTranslate(contextPtr: Long, prompt: String, maxTokens: Int): String
+    private external fun nativeTranslate(
+        contextPtr: Long, prompt: String, maxTokens: Int, useChatTemplate: Boolean
+    ): String
 
     /** Run streaming translation. Calls callback.onToken() per token. Returns [promptTokens, genTokens]. */
     private external fun nativeTranslateStreaming(
-        contextPtr: Long, prompt: String, maxTokens: Int, callback: TokenCallback
+        contextPtr: Long, prompt: String, maxTokens: Int, useChatTemplate: Boolean,
+        callback: TokenCallback
     ): IntArray
 
     /** Release model from memory. */
@@ -69,8 +72,21 @@ class TranslationEngine {
 
     fun loadModel(modelPath: String, nThreads: Int = 4): Boolean {
         if (isLoaded) unloadModel()
-        contextPtr = nativeLoadModel(modelPath, nThreads)
+        val optimalThreads = getOptimalThreadCount(nThreads)
+        android.util.Log.i("TranslationEngine", "Loading model: threads=$optimalThreads (requested=$nThreads, cores=${Runtime.getRuntime().availableProcessors()})")
+        contextPtr = nativeLoadModel(modelPath, optimalThreads)
         return isLoaded
+    }
+
+    /**
+     * Clamp thread count to performance cores.
+     * On big.LITTLE SoCs (e.g. 4 perf + 4 efficiency), using all 8 cores
+     * pushes threads to slow efficiency cores, degrading throughput.
+     */
+    private fun getOptimalThreadCount(requested: Int): Int {
+        val totalCores = Runtime.getRuntime().availableProcessors()
+        val perfCores = (totalCores / 2).coerceAtLeast(2)
+        return requested.coerceIn(1, perfCores)
     }
 
     fun unloadModel() {
@@ -90,9 +106,10 @@ class TranslationEngine {
         maxTokens: Int = 2048
     ): String {
         if (!isLoaded) throw IllegalStateException("Модель перевода не загружена")
-        val prompt = buildPrompt(sourceText, source, target)
-        // Note: caller must hold inferenceMutex when calling from coroutines
-        return nativeTranslate(contextPtr, prompt, maxTokens).trim()
+        val style = getActivePromptStyle()
+        val prompt = buildPrompt(sourceText, source, target, style)
+        val useChatTemplate = style != PromptStyle.TRANSLATE_GEMMA
+        return nativeTranslate(contextPtr, prompt, maxTokens, useChatTemplate).trim()
     }
 
     /** Thread-safe translate for use from coroutines. */
@@ -118,7 +135,9 @@ class TranslationEngine {
         onComplete: ((StreamResult) -> Unit)? = null
     ): Flow<String> = channelFlow {
         if (!isLoaded) throw IllegalStateException("Модель перевода не загружена")
-        val prompt = buildPrompt(sourceText, source, target)
+        val style = getActivePromptStyle()
+        val prompt = buildPrompt(sourceText, source, target, style)
+        val useChatTemplate = style != PromptStyle.TRANSLATE_GEMMA
 
         val callback = object : TokenCallback {
             override fun onToken(token: String): Boolean {
@@ -130,7 +149,7 @@ class TranslationEngine {
             }
         }
 
-        val counts = nativeTranslateStreaming(contextPtr, prompt, maxTokens, callback)
+        val counts = nativeTranslateStreaming(contextPtr, prompt, maxTokens, useChatTemplate, callback)
         val streamResult = StreamResult(
             promptTokens = counts.getOrElse(0) { 0 },
             generatedTokens = counts.getOrElse(1) { 0 }
@@ -138,12 +157,13 @@ class TranslationEngine {
         onComplete?.invoke(streamResult)
     }
 
-    private fun buildPrompt(text: String, source: Language, target: Language): String {
-        val style = modelRepository?.getActiveFamily()?.promptStyle ?: PromptStyle.HY_MT
+    private fun getActivePromptStyle(): PromptStyle =
+        modelRepository?.getActiveFamily()?.promptStyle ?: PromptStyle.HY_MT
+
+    private fun buildPrompt(text: String, source: Language, target: Language, style: PromptStyle): String {
         return when (style) {
             PromptStyle.HY_MT -> buildHyMtPrompt(text, source, target)
             PromptStyle.TRANSLATE_GEMMA -> buildTranslateGemmaPrompt(text, source, target)
-            PromptStyle.GENERIC_TRANSLATE -> buildGenericPrompt(text, source, target)
         }
     }
 
@@ -162,11 +182,5 @@ class TranslationEngine {
         return "Translate the following text from ${source.displayName} to ${target.displayName}.\n" +
                "${source.displayName}: $text\n" +
                "${target.displayName}:"
-    }
-
-    /** Generic: works with Qwen3, Gemma 4, Tiny Aya, Phi-4, etc. */
-    private fun buildGenericPrompt(text: String, source: Language, target: Language): String {
-        return "Translate the following text from ${source.displayName} into ${target.displayName}. " +
-               "Output only the translation, no explanations.\n\n$text"
     }
 }
