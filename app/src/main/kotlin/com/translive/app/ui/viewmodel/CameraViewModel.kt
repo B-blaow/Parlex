@@ -1,6 +1,7 @@
 package com.translive.app.ui.viewmodel
 
 import android.graphics.*
+import android.os.SystemClock
 import android.text.TextPaint
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -87,6 +88,7 @@ class CameraViewModel @Inject constructor(
             size > LIVE_TRANSLATION_CACHE_LIMIT
     }
     private var frameCounter = 0
+    private var lastLiveFrameStartedAtMs = 0L
 
     init {
         // Observe ML Kit translation readiness
@@ -170,10 +172,18 @@ class CameraViewModel @Inject constructor(
      */
     @androidx.camera.core.ExperimentalGetImage
     fun processLiveFrame(imageProxy: androidx.camera.core.ImageProxy) {
-        if (isLiveProcessing || _uiState.value.mode != CameraMode.LIVE) {
+        if (_uiState.value.mode != CameraMode.LIVE) {
             imageProxy.close()
             return
         }
+
+        val nowMs = SystemClock.elapsedRealtime()
+        if (isLiveProcessing || nowMs - lastLiveFrameStartedAtMs < LIVE_FRAME_INTERVAL_MS) {
+            imageProxy.close()
+            return
+        }
+
+        lastLiveFrameStartedAtMs = nowMs
         isLiveProcessing = true
         frameCounter++
         Log.d("CameraVM", "processLiveFrame #$frameCounter, img=${imageProxy.width}x${imageProxy.height}")
@@ -267,6 +277,7 @@ class CameraViewModel @Inject constructor(
         liveTracks.clear()
         liveTranslationCache.clear()
         nextLiveTrackId = 0
+        lastLiveFrameStartedAtMs = 0L
     }
 
     private suspend fun translateLiveLines(lines: List<OcrLine>): List<TranslatedBlock> {
@@ -564,6 +575,7 @@ class CameraViewModel @Inject constructor(
 
 private const val LIVE_TRACK_TTL_FRAMES = 5
 private const val LIVE_TRANSLATION_CACHE_LIMIT = 160
+private const val LIVE_FRAME_INTERVAL_MS = 450L
 
 private data class LiveTextTrack(
     val id: Int,
