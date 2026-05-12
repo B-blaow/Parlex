@@ -2,6 +2,7 @@ package com.translive.app.engine
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.graphics.Rect
 import android.util.Log
 import com.google.mlkit.vision.common.InputImage
@@ -243,62 +244,98 @@ class OcrEngine @Inject constructor(
 
         val api = tessApi ?: return OcrResult(emptyList(), bitmap.width, bitmap.height)
 
-        val argbBitmap = if (bitmap.config != Bitmap.Config.ARGB_8888) {
-            bitmap.copy(Bitmap.Config.ARGB_8888, false)
-        } else bitmap
+        val ocrBitmap = preprocessForTesseract(bitmap)
+        try {
+            api.setImage(ocrBitmap)
 
-        api.setImage(argbBitmap)
+            val blocks = mutableListOf<OcrBlock>()
+            val iterator = api.resultIterator
 
-        val blocks = mutableListOf<OcrBlock>()
-        val iterator = api.resultIterator
+            if (iterator != null) {
+                val currentLines = mutableListOf<OcrLine>()
+                var blockText = StringBuilder()
+                var blockBox: Rect? = null
 
-        if (iterator != null) {
-            val currentLines = mutableListOf<OcrLine>()
-            var blockText = StringBuilder()
-            var blockBox: Rect? = null
+                iterator.begin()
+                do {
+                    val lineText = iterator.getUTF8Text(TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE)
+                    val lineRect = iterator.getBoundingRect(TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE)
 
-            iterator.begin()
-            do {
-                val lineText = iterator.getUTF8Text(TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE)
-                val lineRect = iterator.getBoundingRect(TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE)
-
-                if (!lineText.isNullOrBlank() && lineRect != null &&
-                    lineRect.width() > 20 && lineRect.height() > 8
-                ) {
-                    currentLines.add(OcrLine(lineText.trim(), lineRect))
-                    blockText.append(lineText.trim()).append(" ")
-                    blockBox = if (blockBox == null) Rect(lineRect) else Rect(
-                        minOf(blockBox.left, lineRect.left),
-                        minOf(blockBox.top, lineRect.top),
-                        maxOf(blockBox.right, lineRect.right),
-                        maxOf(blockBox.bottom, lineRect.bottom)
-                    )
-                }
-
-                if (iterator.isAtFinalElement(
-                        TessBaseAPI.PageIteratorLevel.RIL_BLOCK,
-                        TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE
-                    )
-                ) {
-                    if (currentLines.isNotEmpty() && blockBox != null) {
-                        blocks.add(OcrBlock(blockText.toString().trim(), blockBox, currentLines.toList()))
+                    if (!lineText.isNullOrBlank() && lineRect != null &&
+                        lineRect.width() > 20 && lineRect.height() > 8
+                    ) {
+                        currentLines.add(OcrLine(lineText.trim(), lineRect))
+                        blockText.append(lineText.trim()).append(" ")
+                        blockBox = if (blockBox == null) Rect(lineRect) else Rect(
+                            minOf(blockBox.left, lineRect.left),
+                            minOf(blockBox.top, lineRect.top),
+                            maxOf(blockBox.right, lineRect.right),
+                            maxOf(blockBox.bottom, lineRect.bottom)
+                        )
                     }
-                    currentLines.clear()
-                    blockText = StringBuilder()
-                    blockBox = null
+
+                    if (iterator.isAtFinalElement(
+                            TessBaseAPI.PageIteratorLevel.RIL_BLOCK,
+                            TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE
+                        )
+                    ) {
+                        if (currentLines.isNotEmpty() && blockBox != null) {
+                            blocks.add(OcrBlock(blockText.toString().trim(), blockBox, currentLines.toList()))
+                        }
+                        currentLines.clear()
+                        blockText = StringBuilder()
+                        blockBox = null
+                    }
+                } while (iterator.next(TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE))
+
+                if (currentLines.isNotEmpty() && blockBox != null) {
+                    blocks.add(OcrBlock(blockText.toString().trim(), blockBox!!, currentLines.toList()))
                 }
-            } while (iterator.next(TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE))
-
-            if (currentLines.isNotEmpty() && blockBox != null) {
-                blocks.add(OcrBlock(blockText.toString().trim(), blockBox!!, currentLines.toList()))
+                iterator.delete()
             }
-            iterator.delete()
-        }
 
-        return OcrResult(blocks, bitmap.width, bitmap.height)
+            return OcrResult(blocks, bitmap.width, bitmap.height)
+        } finally {
+            if (ocrBitmap !== bitmap) {
+                ocrBitmap.recycle()
+            }
+        }
     }
 
     // ── Utils ────────────────────────────────────────────────────────────
+
+    private fun preprocessForTesseract(bitmap: Bitmap): Bitmap {
+        val width = bitmap.width
+        val height = bitmap.height
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        var minLum = 255
+        var maxLum = 0
+        for (pixel in pixels) {
+            val lum = luminance(pixel)
+            if (lum < minLum) minLum = lum
+            if (lum > maxLum) maxLum = lum
+        }
+
+        val range = (maxLum - minLum).coerceAtLeast(1)
+        val shouldStretch = range > 24
+        for (i in pixels.indices) {
+            val rawLum = luminance(pixels[i])
+            val normalized = if (shouldStretch) {
+                ((rawLum - minLum) * 255 / range).coerceIn(0, 255)
+            } else {
+                rawLum
+            }
+            val contrasted = (((normalized - 128) * 1.35f) + 128).toInt().coerceIn(0, 255)
+            pixels[i] = Color.rgb(contrasted, contrasted, contrasted)
+        }
+
+        return Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
+    }
+
+    private fun luminance(pixel: Int): Int =
+        (Color.red(pixel) * 299 + Color.green(pixel) * 587 + Color.blue(pixel) * 114) / 1000
 
     @androidx.camera.core.ExperimentalGetImage
     private fun imageProxyToUprightBitmap(imageProxy: androidx.camera.core.ImageProxy): Bitmap? {
