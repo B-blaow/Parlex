@@ -1,11 +1,14 @@
 package com.translive.app.ui.screens
 
 import android.Manifest
+import android.view.MotionEvent
 import android.view.ViewGroup
 import android.view.Surface as AndroidSurface
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.core.UseCaseGroup
@@ -55,6 +58,7 @@ import com.translive.app.ui.viewmodel.CameraViewModel
 import com.translive.app.ui.viewmodel.CaptureStatus
 import com.translive.app.ui.viewmodel.TranslatedBlock
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @androidx.camera.core.ExperimentalGetImage
@@ -347,6 +351,7 @@ private fun LiveCameraView(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val executor = remember { Executors.newSingleThreadExecutor() }
+    val boundCamera = remember { java.util.concurrent.atomic.AtomicReference<Camera?>(null) }
     val analysisResolutionSelector = remember {
         ResolutionSelector.Builder()
             .setAspectRatioStrategy(AspectRatioStrategy.RATIO_16_9_FALLBACK_AUTO_STRATEGY)
@@ -373,6 +378,34 @@ private fun LiveCameraView(
 
     LaunchedEffect(previewView) {
         onPreviewView(previewView)
+    }
+
+    DisposableEffect(previewView) {
+        previewView.setOnTouchListener { view, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> true
+                MotionEvent.ACTION_UP -> {
+                    val camera = boundCamera.get()
+                    if (camera != null) {
+                        val point = previewView.meteringPointFactory.createPoint(event.x, event.y)
+                        val action = FocusMeteringAction.Builder(
+                            point,
+                            FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE
+                        )
+                            .setAutoCancelDuration(3, TimeUnit.SECONDS)
+                            .build()
+                        camera.cameraControl.startFocusAndMetering(action)
+                    }
+                    view.performClick()
+                    true
+                }
+                else -> false
+            }
+        }
+
+        onDispose {
+            previewView.setOnTouchListener(null)
+        }
     }
 
     DisposableEffect(Unit) {
@@ -410,6 +443,7 @@ private fun LiveCameraView(
                         }
 
                     provider.unbindAll()
+                    boundCamera.set(null)
 
                     val viewPort = previewView.viewPort
                     if (viewPort != null) {
@@ -418,8 +452,10 @@ private fun LiveCameraView(
                             .addUseCase(preview)
                             .addUseCase(imageAnalysis)
                             .build()
-                        provider.bindToLifecycle(
-                            lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, useCaseGroup
+                        boundCamera.set(
+                            provider.bindToLifecycle(
+                                lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, useCaseGroup
+                            )
                         )
                         android.util.Log.i(
                             "CameraScreen",
@@ -427,9 +463,11 @@ private fun LiveCameraView(
                         )
                     } else {
                         android.util.Log.w("CameraScreen", "PreviewView ViewPort unavailable, binding fallback")
-                        provider.bindToLifecycle(
-                            lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA,
-                            preview, imageAnalysis
+                        boundCamera.set(
+                            provider.bindToLifecycle(
+                                lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA,
+                                preview, imageAnalysis
+                            )
                         )
                     }
                 } catch (e: Exception) {
@@ -439,6 +477,7 @@ private fun LiveCameraView(
 
             onDispose {
                 isDisposed = true
+                boundCamera.set(null)
                 try {
                     val provider = ProcessCameraProvider.getInstance(context).get()
                     provider.unbindAll()
