@@ -3,6 +3,7 @@ package com.translive.app.ui.screens
 import android.Manifest
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.graphics.RectF
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
@@ -31,13 +32,16 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -58,11 +62,17 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.translive.app.ui.components.AppBottomNavigation
@@ -77,6 +87,7 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 private const val CAMERA_PREFS = "parlex_camera"
 private const val PREF_SELECTED_CAMERA_ID = "selected_camera_id"
@@ -295,6 +306,9 @@ fun CameraScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val clipboardManager = LocalClipboardManager.current
+    val systemTts = viewModel.systemTts
+    val isSpeaking by systemTts.isSpeaking.collectAsState()
     val isDebugBuild = remember(context) {
         (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
     }
@@ -310,6 +324,7 @@ fun CameraScreen(
     }
     var torchEnabled by rememberSaveable { mutableStateOf(false) }
     var flashModeName by rememberSaveable { mutableStateOf(CaptureFlashMode.OFF.name) }
+    var selectedLiveBlock by remember { mutableStateOf<TranslatedBlock?>(null) }
     val captureFlashMode = remember(flashModeName) {
         runCatching { CaptureFlashMode.valueOf(flashModeName) }
             .getOrDefault(CaptureFlashMode.OFF)
@@ -320,6 +335,7 @@ fun CameraScreen(
     ) { granted -> viewModel.setPermissionGranted(granted) }
 
     LaunchedEffect(Unit) {
+        systemTts.initialize()
         val granted = ContextCompat.checkSelfPermission(
             context, Manifest.permission.CAMERA
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -343,6 +359,16 @@ fun CameraScreen(
             delay(850)
             focusPoint = null
         }
+    }
+
+    LaunchedEffect(uiState.mode, uiState.liveBlocks) {
+        if (uiState.mode != CameraMode.LIVE) {
+            selectedLiveBlock = null
+            return@LaunchedEffect
+        }
+        val selected = selectedLiveBlock ?: return@LaunchedEffect
+        val stillVisible = uiState.liveBlocks.any { it.originalText == selected.originalText }
+        if (!stillVisible) selectedLiveBlock = null
     }
 
     Scaffold(
@@ -424,9 +450,35 @@ fun CameraScreen(
                                 imageWidth = uiState.imageWidth,
                                 imageHeight = uiState.imageHeight
                             )
+                            LiveTextHitTargets(
+                                blocks = uiState.liveBlocks,
+                                imageWidth = uiState.imageWidth,
+                                imageHeight = uiState.imageHeight,
+                                onBlockSelected = { selectedLiveBlock = it }
+                            )
                         }
 
                         FocusReticle(focusPoint)
+
+                        selectedLiveBlock?.let { block ->
+                            LiveTextSelectionPanel(
+                                block = block,
+                                sourceLanguageCode = uiState.sourceLanguage.code,
+                                targetLanguageCode = uiState.targetLanguage.code,
+                                isSpeaking = isSpeaking,
+                                onCopy = { text ->
+                                    clipboardManager.setText(AnnotatedString(text))
+                                },
+                                onSpeak = { text, languageCode ->
+                                    if (isSpeaking) {
+                                        systemTts.stop()
+                                    } else {
+                                        systemTts.speak(text, languageCode)
+                                    }
+                                },
+                                onDismiss = { selectedLiveBlock = null }
+                            )
+                        }
 
                         // NMT status badge
                         if (uiState.isNmtDownloading) {
@@ -610,7 +662,8 @@ private fun BoxScope.CameraHardwareControls(
     Surface(
         modifier = Modifier
             .align(Alignment.TopEnd)
-            .padding(12.dp),
+            .padding(12.dp)
+            .zIndex(3f),
         color = Color.Black.copy(alpha = 0.56f),
         contentColor = Color.White,
         shape = RoundedCornerShape(18.dp)
@@ -738,6 +791,138 @@ private fun BoxScope.CameraDebugCaptureButton(
                 contentDescription = "Save debug capture pack",
                 tint = if (enabled) Color.White else Color.White.copy(alpha = 0.38f)
             )
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.LiveTextHitTargets(
+    blocks: List<TranslatedBlock>,
+    imageWidth: Int,
+    imageHeight: Int,
+    onBlockSelected: (TranslatedBlock) -> Unit
+) {
+    if (imageWidth <= 0 || imageHeight <= 0) return
+
+    val density = LocalDensity.current
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .zIndex(2f)
+    ) {
+        val overlayWidth = with(density) { maxWidth.toPx() }
+        val overlayHeight = with(density) { maxHeight.toPx() }
+        val minHitSizePx = with(density) { 44.dp.toPx() }
+
+        blocks.forEach { block ->
+            val rect = overlayRect(
+                box = block.boundingBox,
+                imageWidth = imageWidth,
+                imageHeight = imageHeight,
+                overlayWidth = overlayWidth,
+                overlayHeight = overlayHeight
+            ) ?: return@forEach
+
+            val hitWidth = maxOf(rect.width(), minHitSizePx)
+            val hitHeight = maxOf(rect.height(), minHitSizePx)
+            val hitLeft = (rect.centerX() - hitWidth / 2f)
+                .coerceIn(0f, (overlayWidth - hitWidth).coerceAtLeast(0f))
+            val hitTop = (rect.centerY() - hitHeight / 2f)
+                .coerceIn(0f, (overlayHeight - hitHeight).coerceAtLeast(0f))
+            val interactionSource = remember(block.originalText, block.translatedText, block.boundingBox) {
+                MutableInteractionSource()
+            }
+
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(hitLeft.roundToInt(), hitTop.roundToInt()) }
+                    .size(
+                        width = with(density) { hitWidth.toDp() },
+                        height = with(density) { hitHeight.toDp() }
+                    )
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = { onBlockSelected(block) }
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.LiveTextSelectionPanel(
+    block: TranslatedBlock,
+    sourceLanguageCode: String,
+    targetLanguageCode: String,
+    isSpeaking: Boolean,
+    onCopy: (String) -> Unit,
+    onSpeak: (String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val spokenText = block.translatedText.ifBlank { block.originalText }
+    val spokenLanguage = if (block.translatedText.isNotBlank()) targetLanguageCode else sourceLanguageCode
+    val copyText = buildString {
+        append(block.originalText)
+        if (block.translatedText.isNotBlank()) {
+            append('\n')
+            append(block.translatedText)
+        }
+    }
+
+    Surface(
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(start = 12.dp, end = 12.dp, bottom = 132.dp)
+            .fillMaxWidth()
+            .zIndex(4f),
+        color = Color.Black.copy(alpha = 0.78f),
+        contentColor = Color.White,
+        shape = RoundedCornerShape(18.dp),
+        tonalElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(start = 14.dp, top = 10.dp, end = 8.dp, bottom = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(verticalAlignment = Alignment.Top) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = block.originalText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.72f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = block.translatedText.ifBlank { block.originalText },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                IconButton(onClick = { onCopy(copyText) }) {
+                    Icon(Icons.Filled.ContentCopy, contentDescription = "Copy text")
+                }
+                IconButton(
+                    onClick = { onSpeak(spokenText, spokenLanguage) },
+                    enabled = spokenText.isNotBlank()
+                ) {
+                    Icon(
+                        if (isSpeaking) Icons.Filled.StopCircle else Icons.AutoMirrored.Filled.VolumeUp,
+                        contentDescription = if (isSpeaking) "Stop speech" else "Speak text",
+                        tint = if (isSpeaking) Color(0xFFFFB4AB) else Color.White
+                    )
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.Close, contentDescription = "Close")
+                }
+            }
         }
     }
 }
@@ -1149,6 +1334,35 @@ private fun createOverlayTextLayout(
         .setMaxLines(maxLines)
         .setEllipsize(TextUtils.TruncateAt.END)
         .build()
+
+private fun overlayRect(
+    box: android.graphics.Rect,
+    imageWidth: Int,
+    imageHeight: Int,
+    overlayWidth: Float,
+    overlayHeight: Float
+): RectF? {
+    if (imageWidth <= 0 || imageHeight <= 0 || overlayWidth <= 0f || overlayHeight <= 0f) {
+        return null
+    }
+
+    val scaleX = overlayWidth / imageWidth.toFloat()
+    val scaleY = overlayHeight / imageHeight.toFloat()
+    val scale = maxOf(scaleX, scaleY)
+    val offsetX = (overlayWidth - imageWidth * scale) / 2f
+    val offsetY = (overlayHeight - imageHeight * scale) / 2f
+    val left = box.left * scale + offsetX
+    val top = box.top * scale + offsetY
+    val right = box.right * scale + offsetX
+    val bottom = box.bottom * scale + offsetY
+    if (right <= 0f || bottom <= 0f || left >= overlayWidth || top >= overlayHeight) return null
+    return RectF(
+        left.coerceIn(0f, overlayWidth),
+        top.coerceIn(0f, overlayHeight),
+        right.coerceIn(0f, overlayWidth),
+        bottom.coerceIn(0f, overlayHeight)
+    )
+}
 
 /** Display the painted bitmap (with translations baked in) with pinch-to-zoom. */
 @Composable

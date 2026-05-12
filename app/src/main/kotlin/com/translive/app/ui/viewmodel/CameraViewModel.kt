@@ -16,6 +16,7 @@ import com.translive.app.engine.CameraTranslateEngine
 import com.translive.app.engine.OcrLine
 import com.translive.app.engine.OcrResult
 import com.translive.app.engine.OcrEngine
+import com.translive.app.engine.SystemTtsEngine
 import com.translive.app.engine.TranslationEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -147,7 +148,8 @@ class CameraViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val ocrEngine: OcrEngine,
     private val translationEngine: TranslationEngine,
-    private val cameraTranslateEngine: CameraTranslateEngine
+    private val cameraTranslateEngine: CameraTranslateEngine,
+    val systemTts: SystemTtsEngine
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CameraUiState())
