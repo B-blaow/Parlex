@@ -1,7 +1,6 @@
 package com.translive.app.ui.viewmodel
 
 import android.graphics.*
-import android.graphics.Matrix
 import android.text.TextPaint
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -51,8 +50,6 @@ data class CameraUiState(
     val paintedBitmap: Bitmap? = null,
     val imageWidth: Int = 0,
     val imageHeight: Int = 0,
-    /** CameraX coordinate transform matrix: ImageProxy → PreviewView */
-    val transformMatrix: Matrix? = null,
     val hasCameraPermission: Boolean = false,
     /** ML Kit model download status */
     val isNmtReady: Boolean = false,
@@ -141,8 +138,7 @@ class CameraViewModel @Inject constructor(
                 captureStatus = CaptureStatus.IDLE,
                 captureMessage = null,
                 imageWidth = 0,
-                imageHeight = 0,
-                transformMatrix = null
+                imageHeight = 0
             )
         }
     }
@@ -163,7 +159,7 @@ class CameraViewModel @Inject constructor(
      * Live mode: OCR + ML Kit translate → show translated overlays.
      */
     @androidx.camera.core.ExperimentalGetImage
-    fun processLiveFrame(imageProxy: androidx.camera.core.ImageProxy, transformMatrix: Matrix?) {
+    fun processLiveFrame(imageProxy: androidx.camera.core.ImageProxy) {
         if (isLiveProcessing || _uiState.value.mode != CameraMode.LIVE) {
             imageProxy.close()
             return
@@ -196,8 +192,7 @@ class CameraViewModel @Inject constructor(
                     it.copy(
                         liveBlocks = translatedBlocks,
                         imageWidth = ocrResult.imageWidth,
-                        imageHeight = ocrResult.imageHeight,
-                        transformMatrix = transformMatrix
+                        imageHeight = ocrResult.imageHeight
                     )
                 }
             } catch (e: Exception) {

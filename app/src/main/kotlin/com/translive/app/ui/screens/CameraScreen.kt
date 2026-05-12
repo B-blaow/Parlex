@@ -1,9 +1,8 @@
 package com.translive.app.ui.screens
 
 import android.Manifest
-import android.graphics.Matrix
-import android.graphics.RectF
 import android.view.ViewGroup
+import android.view.Surface as AndroidSurface
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -12,8 +11,6 @@ import androidx.camera.core.Preview
 import androidx.camera.core.UseCaseGroup
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.camera.view.transform.CoordinateTransform
-import androidx.camera.view.transform.ImageProxyTransformFactory
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -39,8 +36,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -132,7 +131,6 @@ fun CameraScreen(
                         if (uiState.liveBlocks.isNotEmpty()) {
                             TranslationOverlay(
                                 blocks = uiState.liveBlocks,
-                                transformMatrix = uiState.transformMatrix,
                                 imageWidth = uiState.imageWidth,
                                 imageHeight = uiState.imageHeight
                             )
@@ -357,129 +355,114 @@ private fun LiveCameraView(
         }
     }
 
-    val transformFactory = remember { ImageProxyTransformFactory().apply { isUsingRotationDegrees = true } }
+    var previewSize by remember { mutableStateOf(IntSize.Zero) }
 
-    // Cached transform matrix — computed when preview starts streaming
-    var cachedMatrix by remember { mutableStateOf<Matrix?>(null) }
-
-    // Bind camera exactly once
-    DisposableEffect(lifecycleOwner) {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-        cameraProviderFuture.addListener({
-            try {
-                val provider = cameraProviderFuture.get()
-                val preview = Preview.Builder().build().also {
-                    it.surfaceProvider = previewView.surfaceProvider
-                }
-                val imageAnalysis = ImageAnalysis.Builder()
-                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                    .build()
-                    .also { analysis ->
-                        analysis.setAnalyzer(executor) { imageProxy ->
-                            // Try to compute transform matrix if not cached yet
-                            if (cachedMatrix == null) {
-                                try {
-                                    val targetTransform = previewView.outputTransform
-                                    if (targetTransform != null) {
-                                        val sourceTransform = transformFactory.getOutputTransform(imageProxy)
-                                        val coordTransform = CoordinateTransform(sourceTransform, targetTransform)
-                                        val m = Matrix()
-                                        coordTransform.transform(m)
-                                        cachedMatrix = m
-                                        android.util.Log.i("CameraScreen", "CoordinateTransform matrix cached OK")
-                                    }
-                                } catch (e: Exception) {
-                                    android.util.Log.w("CameraScreen", "Transform not ready: ${e.message}")
-                                }
-                            }
-                            viewModel.processLiveFrame(imageProxy, cachedMatrix)
-                        }
-                    }
-
-                provider.unbindAll()
-
-                // Use UseCaseGroup with shared ViewPort for accurate coordinate alignment
-                val viewPort = previewView.viewPort
-                if (viewPort != null) {
-                    val useCaseGroup = UseCaseGroup.Builder()
-                        .setViewPort(viewPort)
-                        .addUseCase(preview)
-                        .addUseCase(imageAnalysis)
-                        .build()
-                    provider.bindToLifecycle(
-                        lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, useCaseGroup
-                    )
-                } else {
-                    // Fallback: bind without ViewPort (first frame before layout)
-                    provider.bindToLifecycle(
-                        lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA,
-                        preview, imageAnalysis
-                    )
-                }
-                android.util.Log.i("CameraScreen", "Camera bound OK with UseCaseGroup, analyzer attached")
-            } catch (e: Exception) {
-                android.util.Log.e("CameraScreen", "Camera bind failed: ${e.message}", e)
-            }
-        }, ContextCompat.getMainExecutor(context))
-
+    LaunchedEffect(previewView) {
         onPreviewView(previewView)
+    }
 
+    DisposableEffect(Unit) {
         onDispose {
-            try {
-                val provider = ProcessCameraProvider.getInstance(context).get()
-                provider.unbindAll()
-            } catch (_: Exception) {}
+            executor.shutdown()
+        }
+    }
+
+    DisposableEffect(lifecycleOwner, previewSize) {
+        if (previewSize == IntSize.Zero) {
+            onDispose {}
+        } else {
+            var isDisposed = false
+            val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+            cameraProviderFuture.addListener({
+                if (isDisposed) return@addListener
+                try {
+                    val provider = cameraProviderFuture.get()
+                    val rotation = previewView.display?.rotation ?: AndroidSurface.ROTATION_0
+                    val preview = Preview.Builder()
+                        .setTargetRotation(rotation)
+                        .build()
+                        .also {
+                            it.surfaceProvider = previewView.surfaceProvider
+                        }
+                    val imageAnalysis = ImageAnalysis.Builder()
+                        .setTargetRotation(rotation)
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .build()
+                        .also { analysis ->
+                            analysis.setAnalyzer(executor) { imageProxy ->
+                                viewModel.processLiveFrame(imageProxy)
+                            }
+                        }
+
+                    provider.unbindAll()
+
+                    val viewPort = previewView.viewPort
+                    if (viewPort != null) {
+                        val useCaseGroup = UseCaseGroup.Builder()
+                            .setViewPort(viewPort)
+                            .addUseCase(preview)
+                            .addUseCase(imageAnalysis)
+                            .build()
+                        provider.bindToLifecycle(
+                            lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, useCaseGroup
+                        )
+                        android.util.Log.i(
+                            "CameraScreen",
+                            "Camera bound with ViewPort ${previewSize.width}x${previewSize.height}"
+                        )
+                    } else {
+                        android.util.Log.w("CameraScreen", "PreviewView ViewPort unavailable, binding fallback")
+                        provider.bindToLifecycle(
+                            lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA,
+                            preview, imageAnalysis
+                        )
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("CameraScreen", "Camera bind failed: ${e.message}", e)
+                }
+            }, ContextCompat.getMainExecutor(context))
+
+            onDispose {
+                isDisposed = true
+                try {
+                    val provider = ProcessCameraProvider.getInstance(context).get()
+                    provider.unbindAll()
+                } catch (_: Exception) {}
+            }
         }
     }
 
     AndroidView(
         factory = { previewView },
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .onGloballyPositioned { coordinates ->
+                previewSize = coordinates.size
+            }
     )
 }
 
-/**
- * Live translation overlay — uses CameraX CoordinateTransform matrix when available,
- * falls back to manual FILL_CENTER calculation otherwise.
- */
+/** Live translation overlay mapped from OCR bitmap coordinates to PreviewView FILL_CENTER. */
 @Composable
 private fun TranslationOverlay(
     blocks: List<TranslatedBlock>,
-    transformMatrix: Matrix?,
     imageWidth: Int,
     imageHeight: Int
 ) {
     Canvas(modifier = Modifier.fillMaxSize()) {
         for (block in blocks) {
             val box = block.boundingBox
-            val left: Float
-            val top: Float
-            val w: Float
-            val h: Float
+            if (imageWidth <= 0 || imageHeight <= 0) continue
 
-            if (transformMatrix != null) {
-                // Official CameraX transform — handles rotation, crop, scaling
-                val mappedRect = RectF(
-                    box.left.toFloat(), box.top.toFloat(),
-                    box.right.toFloat(), box.bottom.toFloat()
-                )
-                transformMatrix.mapRect(mappedRect)
-                left = mappedRect.left
-                top = mappedRect.top
-                w = mappedRect.width()
-                h = mappedRect.height()
-            } else if (imageWidth > 0 && imageHeight > 0) {
-                // Fallback: manual FILL_CENTER math
-                val scaleX = size.width / imageWidth.toFloat()
-                val scaleY = size.height / imageHeight.toFloat()
-                val scale = maxOf(scaleX, scaleY)
-                val offsetX = (size.width - imageWidth * scale) / 2f
-                val offsetY = (size.height - imageHeight * scale) / 2f
-                left = box.left * scale + offsetX
-                top = box.top * scale + offsetY
-                w = box.width() * scale
-                h = box.height() * scale
-            } else continue
+            val scaleX = size.width / imageWidth.toFloat()
+            val scaleY = size.height / imageHeight.toFloat()
+            val scale = maxOf(scaleX, scaleY)
+            val offsetX = (size.width - imageWidth * scale) / 2f
+            val offsetY = (size.height - imageHeight * scale) / 2f
+            val left = box.left * scale + offsetX
+            val top = box.top * scale + offsetY
+            val w = box.width() * scale
+            val h = box.height() * scale
 
             if (block.translatedText.isNotBlank()) {
                 // Semi-transparent dark background

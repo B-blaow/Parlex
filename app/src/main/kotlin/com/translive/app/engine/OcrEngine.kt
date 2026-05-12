@@ -142,37 +142,16 @@ class OcrEngine @Inject constructor(
         imageProxy: androidx.camera.core.ImageProxy,
         sourceLanguageCode: String = "en"
     ): OcrResult {
-        val backend = backendFor(sourceLanguageCode)
-
-        if (backend == OcrBackend.TESSERACT) {
-            val bitmap = imageProxyToBitmap(imageProxy)
+        val bitmap = try {
+            imageProxyToUprightBitmap(imageProxy)
+        } finally {
             imageProxy.close()
-            return if (bitmap != null) {
-                recognizeWithTesseract(bitmap, sourceLanguageCode)
-            } else {
-                OcrResult(emptyList(), 0, 0)
-            }
         }
 
-        // ML Kit path — MUST keep imageProxy open until ML Kit finishes processing.
-        // InputImage.fromMediaImage() does NOT copy data; it holds a reference
-        // to the underlying buffer. Closing imageProxy before process() completes
-        // destroys the buffer → empty/garbage OCR results.
-        val mediaImage = imageProxy.image ?: run {
-            imageProxy.close()
-            return OcrResult(emptyList(), 0, 0)
-        }
-        val rotation = imageProxy.imageInfo.rotationDegrees
-        val image = InputImage.fromMediaImage(mediaImage, rotation)
-        val w = imageProxy.width
-        val h = imageProxy.height
-        val recognizer = when (backend) {
-            OcrBackend.MLKIT_CHINESE -> chineseRecognizer
-            OcrBackend.MLKIT_DEVANAGARI -> devanagariRecognizer
-            else -> latinRecognizer
-        }
-        return recognizeWithMlKit(image, recognizer, w, h) {
-            imageProxy.close()  // close AFTER ML Kit is done
+        return if (bitmap != null) {
+            recognize(bitmap, sourceLanguageCode)
+        } else {
+            OcrResult(emptyList(), 0, 0)
         }
     }
 
@@ -322,7 +301,7 @@ class OcrEngine @Inject constructor(
     // ── Utils ────────────────────────────────────────────────────────────
 
     @androidx.camera.core.ExperimentalGetImage
-    private fun imageProxyToBitmap(imageProxy: androidx.camera.core.ImageProxy): Bitmap? {
+    private fun imageProxyToUprightBitmap(imageProxy: androidx.camera.core.ImageProxy): Bitmap? {
         val image = imageProxy.image ?: return null
         val width = image.width
         val height = image.height
@@ -332,8 +311,10 @@ class OcrEngine @Inject constructor(
         val vPlane = image.planes[2]
 
         val yRowStride = yPlane.rowStride
-        val uvRowStride = uPlane.rowStride
-        val uvPixelStride = uPlane.pixelStride
+        val uRowStride = uPlane.rowStride
+        val vRowStride = vPlane.rowStride
+        val uPixelStride = uPlane.pixelStride
+        val vPixelStride = vPlane.pixelStride
 
         // Build NV21 byte array: Y plane + interleaved VU
         val nv21 = ByteArray(width * height * 3 / 2)
@@ -354,9 +335,10 @@ class OcrEngine @Inject constructor(
 
         for (row in 0 until uvHeight) {
             for (col in 0 until uvWidth) {
-                val bufferIndex = row * uvRowStride + col * uvPixelStride
-                nv21[uvIndex++] = vBuffer.get(bufferIndex)  // V first (NV21)
-                nv21[uvIndex++] = uBuffer.get(bufferIndex)  // then U
+                val vIndex = row * vRowStride + col * vPixelStride
+                val uIndex = row * uRowStride + col * uPixelStride
+                nv21[uvIndex++] = vBuffer.get(vIndex)  // V first (NV21)
+                nv21[uvIndex++] = uBuffer.get(uIndex)  // then U
             }
         }
 
@@ -370,12 +352,26 @@ class OcrEngine @Inject constructor(
         val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
             ?: return null
 
+        val crop = imageProxy.cropRect
+        val cropLeft = crop.left.coerceIn(0, bitmap.width - 1)
+        val cropTop = crop.top.coerceIn(0, bitmap.height - 1)
+        val cropRight = crop.right.coerceIn(cropLeft + 1, bitmap.width)
+        val cropBottom = crop.bottom.coerceIn(cropTop + 1, bitmap.height)
+        val cropped = if (
+            cropLeft == 0 && cropTop == 0 &&
+            cropRight == bitmap.width && cropBottom == bitmap.height
+        ) {
+            bitmap
+        } else {
+            Bitmap.createBitmap(bitmap, cropLeft, cropTop, cropRight - cropLeft, cropBottom - cropTop)
+        }
+
         val rotation = imageProxy.imageInfo.rotationDegrees
         return if (rotation != 0) {
             val matrix = android.graphics.Matrix()
             matrix.postRotate(rotation.toFloat())
-            Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-        } else bitmap
+            Bitmap.createBitmap(cropped, 0, 0, cropped.width, cropped.height, matrix, true)
+        } else cropped
     }
 
     fun release() {
