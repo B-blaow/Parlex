@@ -49,7 +49,9 @@ private data class PaintLine(
     val text: String,
     val box: Rect,
     val sourceLanguage: Language? = null,
-    val ocrLanguage: Language? = null
+    val ocrLanguage: Language? = null,
+    val rowIndex: Int? = null,
+    val columnIndex: Int? = null
 )
 
 /** OCR block translated as one context unit, while keeping per-line boxes for painting. */
@@ -94,6 +96,8 @@ private data class CaptureOcrScore(
 private data class CaptureDebugLine(
     val id: String,
     val index: Int,
+    val rowIndex: Int?,
+    val columnIndex: Int?,
     val sourceLanguageCode: String,
     val ocrLanguageCode: String,
     val sourceText: String,
@@ -104,6 +108,12 @@ private data class CaptureDebugLine(
 private data class MixedLineCandidate(
     val line: PaintLine,
     val score: Float
+)
+
+private data class CaptureTableRow(
+    val lines: MutableList<PaintLine>,
+    var centerY: Float,
+    var averageHeight: Float
 )
 
 private data class CaptureDebugAttempt(
@@ -763,8 +773,11 @@ class CameraViewModel @Inject constructor(
                 return
             }
 
-            val captureBlocks = captureOcr.mixedBlocks
-                .ifEmpty { extractCaptureBlocks(ocrResult, effectiveSourceLanguage) }
+            val captureBlocks = applyCaptureTableLayout(
+                captureOcr.mixedBlocks.ifEmpty {
+                    extractCaptureBlocks(ocrResult, effectiveSourceLanguage)
+                }
+            )
             val allLines = captureBlocks.flatMap { it.lines }
 
             if (allLines.isEmpty()) {
@@ -1221,6 +1234,61 @@ class CameraViewModel @Inject constructor(
         }
     }
 
+    private fun applyCaptureTableLayout(blocks: List<PaintBlock>): List<PaintBlock> {
+        val allLines = blocks.flatMap { it.lines }
+        if (allLines.size < 2) return blocks
+
+        val rows = mutableListOf<CaptureTableRow>()
+        allLines
+            .sortedWith(compareBy<PaintLine>({ centerY(it.box) }, { it.box.left }))
+            .forEach { line ->
+                val lineCenterY = centerY(line.box)
+                val row = rows.firstOrNull { existingRow ->
+                    val threshold = max(existingRow.averageHeight, line.box.height().toFloat()) *
+                        TABLE_ROW_MERGE_HEIGHT_FACTOR
+                    abs(existingRow.centerY - lineCenterY) <= threshold
+                }
+
+                if (row == null) {
+                    rows += CaptureTableRow(
+                        lines = mutableListOf(line),
+                        centerY = lineCenterY,
+                        averageHeight = line.box.height().toFloat()
+                    )
+                } else {
+                    row.lines += line
+                    row.centerY = row.lines.map { centerY(it.box) }.average().toFloat()
+                    row.averageHeight = row.lines.map { it.box.height() }.average().toFloat()
+                }
+            }
+
+        val assignedById = rows
+            .sortedBy { it.centerY }
+            .flatMapIndexed { rowIndex, row ->
+                row.lines
+                    .sortedBy { it.box.left }
+                    .mapIndexed { columnIndex, line ->
+                        line.copy(rowIndex = rowIndex, columnIndex = columnIndex)
+                    }
+            }
+            .associateBy { it.id }
+
+        return blocks.map { block ->
+            block.copy(
+                lines = block.lines
+                    .map { line -> assignedById[line.id] ?: line }
+                    .sortedWith(
+                        compareBy<PaintLine>(
+                            { it.rowIndex ?: Int.MAX_VALUE },
+                            { it.columnIndex ?: Int.MAX_VALUE },
+                            { it.box.top },
+                            { it.box.left }
+                        )
+                    )
+            )
+        }
+    }
+
     private fun isPreferredCaptureLine(text: String, expectedScript: OcrTextScript): Boolean {
         var letterCount = 0
         var expectedLetterCount = 0
@@ -1544,6 +1612,8 @@ class CameraViewModel @Inject constructor(
                 CaptureDebugLine(
                     id = line.id,
                     index = index,
+                    rowIndex = line.rowIndex,
+                    columnIndex = line.columnIndex,
                     sourceLanguageCode = (line.sourceLanguage ?: effectiveSourceLanguage).code,
                     ocrLanguageCode = (line.ocrLanguage ?: selectedOcrLanguage).code,
                     sourceText = line.text,
@@ -1606,13 +1676,13 @@ class CameraViewModel @Inject constructor(
         saveBitmap(File(packDir, "translated_overlay.png"), translatedOverlay)
         File(packDir, "recognized.txt").writeText(
             snapshot.lines.joinToString("\n") { line ->
-                "[${line.sourceLanguageCode}] ${line.sourceText}"
+                "[${line.sourceLanguageCode}${line.tableCellLabel()}] ${line.sourceText}"
             },
             Charsets.UTF_8
         )
         File(packDir, "translation.txt").writeText(
             snapshot.lines.joinToString("\n") { line ->
-                "[${line.sourceLanguageCode}] ${line.translatedText}"
+                "[${line.sourceLanguageCode}${line.tableCellLabel()}] ${line.translatedText}"
             },
             Charsets.UTF_8
         )
@@ -1656,7 +1726,11 @@ class CameraViewModel @Inject constructor(
             if (box.width() <= 0 || box.height() <= 0) continue
             canvas.drawRect(box, strokePaint)
 
-            val label = (line.index + 1).toString()
+            val label = if (line.rowIndex != null && line.columnIndex != null) {
+                "${line.rowIndex + 1}.${line.columnIndex + 1}"
+            } else {
+                (line.index + 1).toString()
+            }
             val labelWidth = labelPaint.measureText(label) + 10f
             val labelHeight = labelPaint.textSize + 8f
             val labelLeft = box.left.toFloat()
@@ -1703,6 +1777,12 @@ class CameraViewModel @Inject constructor(
                     .put("blockCount", blocks.size)
                     .put("lineCount", lines.size)
             )
+            .put(
+                "table",
+                JSONObject()
+                    .put("rowCount", lines.mapNotNull { it.rowIndex }.distinct().size)
+                    .put("maxColumnCount", maxColumnCountByRow())
+            )
             .put("files", files)
             .put(
                 "attempts",
@@ -1745,6 +1825,8 @@ class CameraViewModel @Inject constructor(
                             JSONObject()
                                 .put("id", line.id)
                                 .put("index", line.index)
+                                .put("rowIndex", line.rowIndex?.plus(1) ?: JSONObject.NULL)
+                                .put("columnIndex", line.columnIndex?.plus(1) ?: JSONObject.NULL)
                                 .put("sourceLanguage", line.sourceLanguageCode)
                                 .put("ocrLanguage", line.ocrLanguageCode)
                                 .put("sourceText", line.sourceText)
@@ -1755,6 +1837,15 @@ class CameraViewModel @Inject constructor(
                 }
             )
 
+    private fun CaptureDebugSnapshot.maxColumnCountByRow(): Int =
+        lines
+            .filter { it.rowIndex != null && it.columnIndex != null }
+            .groupBy { it.rowIndex }
+            .values
+            .maxOfOrNull { rowLines ->
+                rowLines.maxOf { line -> line.columnIndex ?: -1 } + 1
+            } ?: 0
+
     private fun Rect.toJson(): JSONObject =
         JSONObject()
             .put("left", left)
@@ -1763,6 +1854,13 @@ class CameraViewModel @Inject constructor(
             .put("bottom", bottom)
             .put("width", width())
             .put("height", height())
+
+    private fun CaptureDebugLine.tableCellLabel(): String =
+        if (rowIndex != null && columnIndex != null) {
+            " r${rowIndex + 1}c${columnIndex + 1}"
+        } else {
+            ""
+        }
 
     /**
      * Paint translated text directly on bitmap.
@@ -1974,6 +2072,7 @@ private const val SCRIPT_MISMATCH_MIN_CONFLICTS = 4
 private const val SCRIPT_MISMATCH_RATIO_THRESHOLD = 0.55f
 private const val MIXED_LINE_MIN_SCORE = 18f
 private const val MIXED_LINE_OVERLAP_THRESHOLD = 0.55f
+private const val TABLE_ROW_MERGE_HEIGHT_FACTOR = 0.72f
 private const val LIVE_TRACK_TTL_FRAMES = 5
 private const val LIVE_TRANSLATION_CACHE_LIMIT = 160
 private const val LIVE_FRAME_INTERVAL_MS = 450L
