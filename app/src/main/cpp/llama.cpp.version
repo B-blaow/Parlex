@@ -1,0 +1,7 @@
+llama.cpp tag: b9219
+llama.cpp commit: 45b455e66fc09abed65b7d52d42a4a29ba0d45d6
+updated: 2026-05-18
+
+The actual llama.cpp checkout lives in app/src/main/cpp/llama.cpp/ and is
+ignored by the app repository. Keep this marker in sync whenever the local
+native engine checkout is changed.

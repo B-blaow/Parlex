@@ -186,7 +186,7 @@ cd Parlex
 ```bash
 # llama.cpp (перевод)
 cd app/src/main/cpp
-git clone --depth 1 https://github.com/ggerganov/llama.cpp.git
+git clone --branch b9219 --depth 1 https://github.com/ggerganov/llama.cpp.git
 cd ../../../..
 ```
 
