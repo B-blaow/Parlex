@@ -268,7 +268,7 @@ fun ModelManagerScreen(
         }
     }
 
-    // Gemma license confirmation dialog
+    // License confirmation dialog
     uiState.pendingLicenseVariant?.let { variant ->
         val family = ModelFamily.familyOf(variant)
         AlertDialog(

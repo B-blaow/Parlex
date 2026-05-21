@@ -8,12 +8,14 @@ package com.translive.app.data.model
 object ModelCatalog {
 
     val ALL_FAMILIES: List<ModelFamily> = listOf(
+        hyMt2MobileFamily(),
+        hyMt2QualityFamily(),
         hyMtFamily(),
         translateGemmaFamily(),
         translateGemmaLiteRtFamily()
     )
 
-    // ─── 1. HY-MT 1.5 1.8B (Tencent) ─────────────────────────────────
+    // ─── HY-MT 1.5 1.8B (Tencent) ────────────────────────────────────
 
     private fun hyMtFamily(): ModelFamily {
         val b = "https://huggingface.co/mradermacher/HY-MT1.5-1.8B-GGUF/resolve/main"
@@ -22,7 +24,7 @@ object ModelCatalog {
             id = "hy_mt", name = "HY-MT 1.5 1.8B", developer = "Tencent",
             description = "Специализирован на перевод, 33 языка",
             languageCount = 33, parameterSize = "1.8B",
-            promptStyle = PromptStyle.HY_MT, license = ModelLicense.APACHE_2,
+            promptStyle = PromptStyle.HY_MT, license = ModelLicense.TENCENT_HY_COMMUNITY,
             isSpecialized = true,
             variants = listOf(
                 v("hy_mt:q2_k","Q2_K","Минимальная","2-bit",777_000_000L,1228,"$b/$p.Q2_K.gguf?download=true","$p.Q2_K.gguf"),
@@ -40,7 +42,121 @@ object ModelCatalog {
         )
     }
 
-    // ─── 2. TranslateGemma 4B (Google) ────────────────────────────────
+    // ─── Hy-MT2 1.8B (Tencent) ───────────────────────────────────────
+
+    private fun hyMt2MobileFamily(): ModelFamily {
+        val compact = "https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF/resolve/main"
+        val bit125 = "https://huggingface.co/tencent/Hy-MT2-1.8B-1.25Bit-GGUF/resolve/main"
+        val bit2 = "https://huggingface.co/tencent/Hy-MT2-1.8B-2Bit-GGUF/resolve/main"
+        return ModelFamily(
+            id = "hy_mt2_1_8b", name = "Hy-MT2 1.8B", developer = "Tencent",
+            description = "Fast-thinking перевод, 33 языка, мобильные GGUF",
+            languageCount = 33, parameterSize = "1.8B",
+            promptStyle = PromptStyle.HY_MT2, license = ModelLicense.TENCENT_HY_COMMUNITY,
+            isSpecialized = true,
+            variants = listOf(
+                v(
+                    "hy_mt2_1_8b:1_25bit",
+                    "1.25Bit",
+                    "Ультракомпактная",
+                    "AngelSlim 1.25-bit, около 440 МБ",
+                    461_860_736L,
+                    900,
+                    "$bit125/Hy-MT2-1.8B-1.25Bit.gguf?download=true",
+                    "Hy-MT2-1.8B-1.25Bit.gguf"
+                ),
+                v(
+                    "hy_mt2_1_8b:2bit",
+                    "2Bit",
+                    "Рекомендуемая",
+                    "AngelSlim 2-bit, лучший мобильный баланс",
+                    600_534_880L,
+                    1_100,
+                    "$bit2/Hy-MT2-1.8B-2Bit.gguf?download=true",
+                    "Hy-MT2-1.8B-2Bit.gguf",
+                    true
+                ),
+                v(
+                    "hy_mt2_1_8b:q4_k_m",
+                    "Q4_K_M",
+                    "Качество",
+                    "4-bit, выше качество на сильных телефонах",
+                    1_133_080_448L,
+                    1_800,
+                    "$compact/Hy-MT2-1.8B-Q4_K_M.gguf?download=true",
+                    "Hy-MT2-1.8B-Q4_K_M.gguf"
+                ),
+                v(
+                    "hy_mt2_1_8b:q6_k",
+                    "Q6_K",
+                    "Премиум",
+                    "6-bit, почти без потерь",
+                    1_474_785_120L,
+                    2_300,
+                    "$compact/Hy-MT2-1.8B-Q6_K.gguf?download=true",
+                    "Hy-MT2-1.8B-Q6_K.gguf"
+                ),
+                v(
+                    "hy_mt2_1_8b:q8_0",
+                    "Q8_0",
+                    "Максимальная точность",
+                    "8-bit",
+                    1_908_528_192L,
+                    2_800,
+                    "$compact/Hy-MT2-1.8B-Q8_0.gguf?download=true",
+                    "Hy-MT2-1.8B-Q8_0.gguf"
+                )
+            )
+        )
+    }
+
+    // ─── Hy-MT2 7B (Tencent) ─────────────────────────────────────────
+
+    private fun hyMt2QualityFamily(): ModelFamily {
+        val b = "https://huggingface.co/tencent/Hy-MT2-7B-GGUF/resolve/main"
+        return ModelFamily(
+            id = "hy_mt2_7b", name = "Hy-MT2 7B", developer = "Tencent",
+            description = "Fast-thinking перевод, 33 языка, высокий класс качества",
+            languageCount = 33, parameterSize = "7B",
+            promptStyle = PromptStyle.HY_MT2, license = ModelLicense.TENCENT_HY_COMMUNITY,
+            isSpecialized = true,
+            variants = listOf(
+                v(
+                    "hy_mt2_7b:q4_k_m",
+                    "Q4_K_M",
+                    "Рекомендуемая",
+                    "4-bit, качество 7B для мощных телефонов",
+                    4_624_648_896L,
+                    6_500,
+                    "$b/Hy-MT2-7B-Q4_K_M.gguf?download=true",
+                    "Hy-MT2-7B-Q4_K_M.gguf",
+                    true
+                ),
+                v(
+                    "hy_mt2_7b:q6_k",
+                    "Q6_K",
+                    "Премиум",
+                    "6-bit, выше качество, больше RAM",
+                    6_164_482_720L,
+                    8_500,
+                    "$b/HY-MT2-7B-Q6_K.gguf?download=true",
+                    "HY-MT2-7B-Q6_K.gguf"
+                ),
+                v(
+                    "hy_mt2_7b:q8_0",
+                    "Q8_0",
+                    "Максимальная точность",
+                    "8-bit, тяжелый режим",
+                    7_981_928_896L,
+                    10_500,
+                    "$b/HY-MT2-7B-Q8_0.gguf?download=true",
+                    "HY-MT2-7B-Q8_0.gguf"
+                )
+            )
+        )
+    }
+
+    // ─── TranslateGemma 4B (Google) ──────────────────────────────────
 
     private fun translateGemmaFamily(): ModelFamily {
         val b = "https://huggingface.co/mradermacher/translategemma-4b-it-GGUF/resolve/main"

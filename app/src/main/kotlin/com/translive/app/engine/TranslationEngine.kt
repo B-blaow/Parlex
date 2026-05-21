@@ -211,6 +211,7 @@ class TranslationEngine {
     private fun buildPrompt(text: String, source: Language, target: Language, style: PromptStyle): String {
         return when (style) {
             PromptStyle.HY_MT -> buildHyMtPrompt(text, source, target)
+            PromptStyle.HY_MT2 -> buildHyMt2Prompt(text, source, target)
             PromptStyle.TRANSLATE_GEMMA -> buildTranslateGemmaPrompt(text, source, target)
         }
     }
@@ -223,6 +224,7 @@ class TranslationEngine {
     ): String {
         return when (style) {
             PromptStyle.HY_MT,
+            PromptStyle.HY_MT2,
             PromptStyle.TRANSLATE_GEMMA -> """
                 Translate the OCR lines from ${source.displayName} to ${target.displayName}.
                 Preserve every line ID exactly, for example [L1].
@@ -240,6 +242,16 @@ class TranslationEngine {
             "将以下文本翻译为${target.nativeName}，注意只需要输出翻译后的结果，不要额外解释：\n$text"
         } else {
             "Translate the following segment into ${target.displayName}, without additional explanation.\n$text"
+        }
+    }
+
+    /** HY-MT2: official default translation instruction from Tencent's model card. */
+    private fun buildHyMt2Prompt(text: String, source: Language, target: Language): String {
+        val isChinese = source.code.startsWith("zh") || target.code.startsWith("zh")
+        return if (isChinese) {
+            "将以下文本翻译为 ${target.nativeName}，注意只需要输出翻译后的结果，不要额外解释：\n\n$text"
+        } else {
+            "Translate the following text into ${target.displayName}. Note that you should only output the translated result without any additional explanation:\n\n$text"
         }
     }
 

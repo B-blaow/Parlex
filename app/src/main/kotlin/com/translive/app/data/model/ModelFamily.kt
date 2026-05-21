@@ -8,6 +8,8 @@ package com.translive.app.data.model
 enum class PromptStyle {
     /** HY-MT specific: Chinese prompt for zh pairs, English for others */
     HY_MT,
+    /** Hy-MT2: Tencent's current default translation instruction */
+    HY_MT2,
     /** TranslateGemma: Google's specialized translation prompt */
     TRANSLATE_GEMMA
 }
@@ -18,6 +20,7 @@ enum class PromptStyle {
  */
 enum class ModelLicense(val displayName: String) {
     APACHE_2("Apache 2.0"),
+    TENCENT_HY_COMMUNITY("Tencent HY Community License"),
     GEMMA_TOU("Gemma Terms of Use")
 }
 
@@ -40,7 +43,7 @@ data class ModelFamily(
 ) {
     /** Whether this family requires a license confirmation dialog before download */
     val requiresLicenseConfirmation: Boolean
-        get() = license == ModelLicense.GEMMA_TOU
+        get() = license != ModelLicense.APACHE_2
 
     companion object {
         /** Find a family by its ID */
