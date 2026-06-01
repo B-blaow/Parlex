@@ -244,7 +244,7 @@ class CameraViewModel @Inject constructor(
         // Observe ML Kit translation readiness
         viewModelScope.launch {
             cameraTranslateEngine.isReady.collect { ready ->
-                _uiState.update { it.copy(isNmtReady = ready) }
+                _uiState.update { it.copy(isNmtReady = isNmtReadyForState(it, ready)) }
             }
         }
         viewModelScope.launch {
@@ -335,7 +335,12 @@ class CameraViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val state = _uiState.value
             if (state.isSourceAuto) {
-                _uiState.update { it.copy(isNmtReady = false, nmtError = null) }
+                _uiState.update {
+                    it.copy(
+                        isNmtReady = isNmtReadyForState(it, cameraTranslateEngine.isReady.value),
+                        nmtError = null
+                    )
+                }
                 return@launch
             }
             val ok = cameraTranslateEngine.prepare(state.sourceLanguage.code, state.targetLanguage.code)
@@ -345,6 +350,13 @@ class CameraViewModel @Inject constructor(
                 _uiState.update { it.copy(nmtError = null) }
             }
         }
+    }
+
+    private fun isNmtReadyForState(state: CameraUiState, engineReady: Boolean): Boolean {
+        val source = if (state.isSourceAuto) state.detectedSourceLanguage else state.sourceLanguage
+        if (source == null) return false
+        if (source.code == state.targetLanguage.code) return true
+        return engineReady && cameraTranslateEngine.isReadyFor(source.code, state.targetLanguage.code)
     }
 
     fun startFullResolutionCapture() {
