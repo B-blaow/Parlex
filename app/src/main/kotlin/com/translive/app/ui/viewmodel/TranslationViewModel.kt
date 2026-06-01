@@ -59,13 +59,13 @@ class TranslationViewModel @Inject constructor(
         TranslationUiState(
             sourceText = savedStateHandle["sourceText"] ?: "",
             translatedText = savedStateHandle["translatedText"] ?: "",
-            isSourceAuto = savedStateHandle.get<Boolean>("srcAuto") ?: false,
+            isSourceAuto = savedStateHandle.get<Boolean>("srcAuto") ?: settings.textSourceAuto,
             sourceLanguage = savedStateHandle.get<String>("srcLang")?.let { code ->
                 Language.entries.find { it.code == code }
-            } ?: Language.RUSSIAN,
+            } ?: settings.textSourceLanguage,
             targetLanguage = savedStateHandle.get<String>("tgtLang")?.let { code ->
                 Language.entries.find { it.code == code }
-            } ?: Language.ENGLISH
+            } ?: settings.textTargetLanguage
         )
     )
     val uiState: StateFlow<TranslationUiState> = _uiState.asStateFlow()
@@ -157,6 +157,8 @@ class TranslationViewModel @Inject constructor(
         }
         savedStateHandle["srcLang"] = lang.code
         savedStateHandle["srcAuto"] = false
+        settings.textSourceLanguage = lang
+        settings.textSourceAuto = false
         sourceDetectionJob?.cancel()
     }
 
@@ -169,12 +171,14 @@ class TranslationViewModel @Inject constructor(
             )
         }
         savedStateHandle["srcAuto"] = true
+        settings.textSourceAuto = true
         scheduleSourceLanguageDetection(_uiState.value.sourceText)
     }
 
     fun setTargetLanguage(lang: Language) {
         _uiState.update { it.copy(targetLanguage = lang) }
         savedStateHandle["tgtLang"] = lang.code
+        settings.textTargetLanguage = lang
     }
 
     fun swapLanguages() {
@@ -193,6 +197,9 @@ class TranslationViewModel @Inject constructor(
         savedStateHandle["tgtLang"] = state.targetLanguage.code
         savedStateHandle["sourceText"] = state.sourceText
         savedStateHandle["translatedText"] = state.translatedText
+        settings.textSourceLanguage = state.sourceLanguage
+        settings.textTargetLanguage = state.targetLanguage
+        settings.textSourceAuto = false
     }
 
     fun translate() {

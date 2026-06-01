@@ -13,6 +13,7 @@ import android.text.TextUtils
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.translive.app.data.SettingsRepository
 import com.translive.app.data.model.Language
 import com.translive.app.engine.CameraTranslateEngine
 import com.translive.app.engine.LanguageDetectionEngine
@@ -201,10 +202,17 @@ class CameraViewModel @Inject constructor(
     private val languageDetectionEngine: LanguageDetectionEngine,
     private val translationEngine: TranslationEngine,
     private val cameraTranslateEngine: CameraTranslateEngine,
+    private val settings: SettingsRepository,
     val systemTts: SystemTtsEngine
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CameraUiState())
+    private val _uiState = MutableStateFlow(
+        CameraUiState(
+            sourceLanguage = settings.cameraSourceLanguage,
+            isSourceAuto = settings.cameraSourceAuto,
+            targetLanguage = settings.cameraTargetLanguage
+        )
+    )
     val uiState: StateFlow<CameraUiState> = _uiState.asStateFlow()
 
     private var translateJob: Job? = null
@@ -244,16 +252,7 @@ class CameraViewModel @Inject constructor(
                 _uiState.update { it.copy(isNmtDownloading = downloading) }
             }
         }
-        // Prepare NMT for default language pair
-        viewModelScope.launch(Dispatchers.IO) {
-            val state = _uiState.value
-            val ok = cameraTranslateEngine.prepare(state.sourceLanguage.code, state.targetLanguage.code)
-            if (!ok) {
-                _uiState.update { it.copy(nmtError = "Модель перевода недоступна. Нужен интернет для первой загрузки.") }
-            } else {
-                _uiState.update { it.copy(nmtError = null) }
-            }
-        }
+        prepareNmt()
     }
 
     fun setPermissionGranted(granted: Boolean) {
@@ -269,6 +268,8 @@ class CameraViewModel @Inject constructor(
                 detectedSourceLanguages = emptyList()
             )
         }
+        settings.cameraSourceLanguage = lang
+        settings.cameraSourceAuto = false
         resetModeVisuals()
         prepareNmt()
     }
@@ -283,12 +284,14 @@ class CameraViewModel @Inject constructor(
                 nmtError = null
             )
         }
+        settings.cameraSourceAuto = true
         resetModeVisuals()
         prepareNmt()
     }
 
     fun setTargetLanguage(lang: Language) {
         _uiState.update { it.copy(targetLanguage = lang) }
+        settings.cameraTargetLanguage = lang
         resetModeVisuals()
         prepareNmt()
     }
@@ -299,6 +302,10 @@ class CameraViewModel @Inject constructor(
         _uiState.update {
             it.copy(sourceLanguage = it.targetLanguage, targetLanguage = it.sourceLanguage)
         }
+        val state = _uiState.value
+        settings.cameraSourceLanguage = state.sourceLanguage
+        settings.cameraTargetLanguage = state.targetLanguage
+        settings.cameraSourceAuto = false
         resetModeVisuals()
         prepareNmt()
     }

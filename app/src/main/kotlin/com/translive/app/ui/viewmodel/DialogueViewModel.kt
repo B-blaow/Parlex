@@ -59,7 +59,12 @@ class DialogueViewModel @Inject constructor(
     private val dialogueDao: DialogueDao
 ) : AndroidViewModel(app) {
 
-    private val _uiState = MutableStateFlow(DialogueUiState())
+    private val _uiState = MutableStateFlow(
+        DialogueUiState(
+            sourceLanguage = settings.dialogueSourceLanguage,
+            targetLanguage = settings.dialogueTargetLanguage
+        )
+    )
     val uiState: StateFlow<DialogueUiState> = _uiState.asStateFlow()
 
     /** Current session ID in Room */
@@ -143,16 +148,21 @@ class DialogueViewModel @Inject constructor(
 
     fun setSourceLanguage(lang: Language) {
         _uiState.update { it.copy(sourceLanguage = lang) }
+        settings.dialogueSourceLanguage = lang
     }
 
     fun setTargetLanguage(lang: Language) {
         _uiState.update { it.copy(targetLanguage = lang) }
+        settings.dialogueTargetLanguage = lang
     }
 
     fun swapLanguages() {
         _uiState.update {
             it.copy(sourceLanguage = it.targetLanguage, targetLanguage = it.sourceLanguage)
         }
+        val state = _uiState.value
+        settings.dialogueSourceLanguage = state.sourceLanguage
+        settings.dialogueTargetLanguage = state.targetLanguage
     }
 
     fun startConversation() {

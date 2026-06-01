@@ -1,6 +1,7 @@
 package com.translive.app.data
 
 import android.content.Context
+import com.translive.app.data.model.Language
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,6 +19,14 @@ class SettingsRepository @Inject constructor(
         private const val KEY_THREADS = "inference_threads"
         private const val KEY_IDLE_TIMEOUT = "idle_timeout_minutes"
         private const val KEY_BACKEND = "compute_backend"
+        private const val KEY_TEXT_SOURCE_LANGUAGE = "text_source_language"
+        private const val KEY_TEXT_SOURCE_AUTO = "text_source_auto"
+        private const val KEY_TEXT_TARGET_LANGUAGE = "text_target_language"
+        private const val KEY_CAMERA_SOURCE_LANGUAGE = "camera_source_language"
+        private const val KEY_CAMERA_SOURCE_AUTO = "camera_source_auto"
+        private const val KEY_CAMERA_TARGET_LANGUAGE = "camera_target_language"
+        private const val KEY_DIALOGUE_SOURCE_LANGUAGE = "dialogue_source_language"
+        private const val KEY_DIALOGUE_TARGET_LANGUAGE = "dialogue_target_language"
 
         const val BACKEND_CPU = "cpu"
         const val BACKEND_GPU = "gpu"
@@ -39,4 +48,41 @@ class SettingsRepository @Inject constructor(
     var backend: String
         get() = prefs.getString(KEY_BACKEND, BACKEND_CPU) ?: BACKEND_CPU
         set(value) = prefs.edit().putString(KEY_BACKEND, value).apply()
+
+    var textSourceLanguage: Language
+        get() = getLanguage(KEY_TEXT_SOURCE_LANGUAGE, Language.RUSSIAN)
+        set(value) = prefs.edit().putString(KEY_TEXT_SOURCE_LANGUAGE, value.code).apply()
+
+    var textSourceAuto: Boolean
+        get() = prefs.getBoolean(KEY_TEXT_SOURCE_AUTO, false)
+        set(value) = prefs.edit().putBoolean(KEY_TEXT_SOURCE_AUTO, value).apply()
+
+    var textTargetLanguage: Language
+        get() = getLanguage(KEY_TEXT_TARGET_LANGUAGE, Language.ENGLISH)
+        set(value) = prefs.edit().putString(KEY_TEXT_TARGET_LANGUAGE, value.code).apply()
+
+    var cameraSourceLanguage: Language
+        get() = getLanguage(KEY_CAMERA_SOURCE_LANGUAGE, Language.RUSSIAN)
+        set(value) = prefs.edit().putString(KEY_CAMERA_SOURCE_LANGUAGE, value.code).apply()
+
+    var cameraSourceAuto: Boolean
+        get() = prefs.getBoolean(KEY_CAMERA_SOURCE_AUTO, false)
+        set(value) = prefs.edit().putBoolean(KEY_CAMERA_SOURCE_AUTO, value).apply()
+
+    var cameraTargetLanguage: Language
+        get() = getLanguage(KEY_CAMERA_TARGET_LANGUAGE, Language.ENGLISH)
+        set(value) = prefs.edit().putString(KEY_CAMERA_TARGET_LANGUAGE, value.code).apply()
+
+    var dialogueSourceLanguage: Language
+        get() = getLanguage(KEY_DIALOGUE_SOURCE_LANGUAGE, Language.RUSSIAN)
+        set(value) = prefs.edit().putString(KEY_DIALOGUE_SOURCE_LANGUAGE, value.code).apply()
+
+    var dialogueTargetLanguage: Language
+        get() = getLanguage(KEY_DIALOGUE_TARGET_LANGUAGE, Language.ENGLISH)
+        set(value) = prefs.edit().putString(KEY_DIALOGUE_TARGET_LANGUAGE, value.code).apply()
+
+    private fun getLanguage(key: String, default: Language): Language {
+        val code = prefs.getString(key, null) ?: return default
+        return Language.entries.find { it.code == code } ?: default
+    }
 }
