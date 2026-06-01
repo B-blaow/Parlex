@@ -19,4 +19,4 @@
 
 - Hy-MT2 keeps the same recommended sampler family as HY-MT 1.5 for 1.8B/7B: temperature 0.7, top_p 0.6, top_k 20, repetition penalty 1.05.
 - The app uses a separate `HY_MT2` prompt style so older HY-MT behavior remains stable.
-- Tencent publishes Hy-MT2 under the Tencent HY Community License. The app now treats Tencent HY models as license-confirmation downloads.
+- Tencent publishes the checked Hy-MT2 repositories with `apache-2.0` metadata. The app now treats Hy-MT2 as Apache 2.0 downloads, while older HY-MT 1.5 remains under Tencent HY Community licensing.

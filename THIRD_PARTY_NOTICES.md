@@ -7,7 +7,7 @@ is subject to its own license, listed below.
 
 ## llama.cpp
 
-- **Repository:** https://github.com/ggerganov/llama.cpp
+- **Repository:** https://github.com/ggml-org/llama.cpp
 - **License:** MIT License
 - **Usage:** LLM inference engine for translation (linked via JNI)
 - **Note:** Not included in this repository. Cloned separately during build.
@@ -60,6 +60,24 @@ is subject to its own license, listed below.
 > Kingdom, and South Korea. Users in those regions are NOT licensed
 > to use this model. See the full license at:
 > https://huggingface.co/tencent/Hy-MT1.5-1.8B/blob/main/LICENSE
+
+---
+
+## Tencent Hy-MT2 (Translation Models)
+
+- **Repository:** https://huggingface.co/collections/tencent/hy-mt2
+- **License:** Apache License 2.0
+- **Usage:** Current Tencent translation models (GGUF quantized variants)
+- **Note:** NOT included in this repository. Must be downloaded separately.
+
+---
+
+## Google TranslateGemma 4B (Translation Model)
+
+- **Repository:** https://huggingface.co/google/translate-gemma-4b-it
+- **License:** Gemma Terms of Use
+- **Usage:** Google translation model via GGUF and LiteRT beta variants
+- **Note:** NOT included in this repository. Must be downloaded separately.
 
 ---
 

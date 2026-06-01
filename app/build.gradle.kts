@@ -17,7 +17,7 @@ if (keystoreFile.exists()) {
 
 android {
     namespace = "com.translive.app"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "27.3.13750724"
 
     defaultConfig {
@@ -89,7 +89,7 @@ android {
 
 dependencies {
     // Compose BOM
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.05.01")
     implementation(composeBom)
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
@@ -98,13 +98,13 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     // Core
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.core:core-ktx:1.18.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
+    implementation("androidx.activity:activity-compose:1.13.0")
 
     // Navigation
-    implementation("androidx.navigation:navigation-compose:2.8.5")
+    implementation("androidx.navigation:navigation-compose:2.9.8")
 
     // Room (history & dialogue logs)
     implementation("androidx.room:room-runtime:2.8.4")
@@ -114,30 +114,30 @@ dependencies {
     // Hilt DI
     implementation("com.google.dagger:hilt-android:2.57.2")
     ksp("com.google.dagger:hilt-android-compiler:2.57.2")
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
 
     // Splash screen
-    implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation("androidx.core:core-splashscreen:1.2.0")
 
     // Lottie for animations
-    implementation("com.airbnb.android:lottie-compose:6.6.2")
+    implementation("com.airbnb.android:lottie-compose:6.7.1")
 
     // OkHttp for model downloads
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp:5.3.2")
 
     // Sherpa-ONNX for Kokoro TTS
     implementation(files("libs/sherpa-onnx-1.13.1.aar"))
 
     // Apache Commons Compress for tar.bz2 extraction
-    implementation("org.apache.commons:commons-compress:1.26.1")
+    implementation("org.apache.commons:commons-compress:1.28.0")
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     // CameraX
-    implementation("androidx.camera:camera-camera2:1.4.1")
-    implementation("androidx.camera:camera-lifecycle:1.4.1")
-    implementation("androidx.camera:camera-view:1.4.1")
+    implementation("androidx.camera:camera-camera2:1.6.1")
+    implementation("androidx.camera:camera-lifecycle:1.6.1")
+    implementation("androidx.camera:camera-view:1.6.1")
 
     // ML Kit Text Recognition (bundled — fully offline)
     implementation("com.google.mlkit:text-recognition:16.0.1")
@@ -145,9 +145,10 @@ dependencies {
 
     // ML Kit Translation (on-device NMT — fast, for camera realtime)
     implementation("com.google.mlkit:translate:17.0.3")
+    implementation("com.google.mlkit:language-id:17.0.6")
 
     // LiteRT-LM beta runtime for TranslateGemma .litertlm experiments
-    implementation("com.google.ai.edge.litertlm:litertlm-android:0.11.0")
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.12.0")
 
     // Tesseract4Android (Cyrillic/Arabic/Thai/etc. OCR — ML Kit doesn't support these scripts)
     implementation("com.github.adaptech-cz.Tesseract4Android:tesseract4android:4.9.0")

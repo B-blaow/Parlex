@@ -15,6 +15,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.translive.app.data.model.Language
 import com.translive.app.engine.CameraTranslateEngine
+import com.translive.app.engine.LanguageDetectionEngine
 import com.translive.app.engine.OcrLine
 import com.translive.app.engine.OcrResult
 import com.translive.app.engine.OcrEngine
@@ -197,6 +198,7 @@ data class CameraUiState(
 class CameraViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val ocrEngine: OcrEngine,
+    private val languageDetectionEngine: LanguageDetectionEngine,
     private val translationEngine: TranslationEngine,
     private val cameraTranslateEngine: CameraTranslateEngine,
     val systemTts: SystemTtsEngine
@@ -1136,12 +1138,7 @@ class CameraViewModel @Inject constructor(
     }
 
     private fun detectSourceLanguageForText(text: String, ocrLanguage: Language): Language =
-        when (expectedScriptForLanguage(ocrLanguage.code)) {
-            OcrTextScript.LATIN -> guessLatinLanguage(text)
-            OcrTextScript.CJK -> guessCjkLanguage(text)
-            OcrTextScript.CYRILLIC -> guessCyrillicLanguage(text)
-            else -> ocrLanguage
-        }
+        languageDetectionEngine.detectLineFallback(text, ocrLanguage)
 
     private fun scoreMixedLineCandidate(
         line: PaintLine,
@@ -1248,59 +1245,13 @@ class CameraViewModel @Inject constructor(
             score
         } ?: attempts.first()
 
-    private fun detectSourceLanguageFromText(
+    private suspend fun detectSourceLanguageFromText(
         result: OcrResult,
         ocrLanguage: Language
     ): Language {
         val text = extractRawCaptureLines(result).joinToString(" ") { it.text }
-        return when (expectedScriptForLanguage(ocrLanguage.code)) {
-            OcrTextScript.LATIN -> guessLatinLanguage(text)
-            OcrTextScript.CJK -> guessCjkLanguage(text)
-            OcrTextScript.CYRILLIC -> guessCyrillicLanguage(text)
-            else -> ocrLanguage
-        }
+        return languageDetectionEngine.detect(text, ocrLanguage)
     }
-
-    private fun guessLatinLanguage(text: String): Language {
-        if (text.isBlank()) return Language.ENGLISH
-
-        val lowerText = text.lowercase(Locale.ROOT)
-        val scores = linkedMapOf(
-            Language.ENGLISH to languageHeuristicScore(lowerText, ENGLISH_HINTS, ENGLISH_CHARS),
-            Language.FRENCH to languageHeuristicScore(lowerText, FRENCH_HINTS, FRENCH_CHARS),
-            Language.GERMAN to languageHeuristicScore(lowerText, GERMAN_HINTS, GERMAN_CHARS),
-            Language.CZECH to languageHeuristicScore(lowerText, CZECH_HINTS, CZECH_CHARS),
-            Language.SPANISH to languageHeuristicScore(lowerText, SPANISH_HINTS, SPANISH_CHARS),
-            Language.PORTUGUESE to languageHeuristicScore(lowerText, PORTUGUESE_HINTS, PORTUGUESE_CHARS),
-            Language.POLISH to languageHeuristicScore(lowerText, POLISH_HINTS, POLISH_CHARS),
-            Language.TURKISH to languageHeuristicScore(lowerText, TURKISH_HINTS, TURKISH_CHARS),
-            Language.VIETNAMESE to languageHeuristicScore(lowerText, VIETNAMESE_HINTS, VIETNAMESE_CHARS)
-        )
-
-        return scores.maxByOrNull { it.value }?.takeIf { it.value > 0 }?.key ?: Language.ENGLISH
-    }
-
-    private fun languageHeuristicScore(
-        lowerText: String,
-        hints: Set<String>,
-        distinctiveChars: Set<Char>
-    ): Int {
-        val words = lowerText.split(Regex("""[^a-z\u00c0-\u024f\u1e00-\u1eff]+"""))
-            .filter { it.isNotBlank() }
-        val hintScore = words.count { it in hints } * 3
-        val charScore = lowerText.count { it in distinctiveChars } * 4
-        return hintScore + charScore
-    }
-
-    private fun guessCjkLanguage(text: String): Language =
-        when {
-            text.any { it in '\uAC00'..'\uD7AF' } -> Language.KOREAN
-            text.any { it in '\u3040'..'\u30FF' } -> Language.JAPANESE
-            else -> Language.CHINESE_SIMPLIFIED
-        }
-
-    private fun guessCyrillicLanguage(text: String): Language =
-        if (text.any { it in UKRAINIAN_CHARS }) Language.UKRAINIAN else Language.RUSSIAN
 
     private fun scoreCaptureOcrResult(result: OcrResult, languageCode: String): CaptureOcrScore {
         val expectedScript = expectedScriptForLanguage(languageCode)
@@ -2662,27 +2613,6 @@ private val AUTO_CAPTURE_OCR_LANGUAGES = listOf(
     Language.CHINESE_SIMPLIFIED,
     Language.HINDI
 )
-
-private val ENGLISH_HINTS = setOf("the", "and", "of", "to", "in", "is", "for", "on", "with", "exit", "entry")
-private val FRENCH_HINTS = setOf("le", "la", "les", "des", "du", "et", "un", "une", "est", "pour", "avec", "sortie")
-private val GERMAN_HINTS = setOf("der", "die", "das", "und", "ist", "zu", "ein", "eine", "mit", "fur", "ausgang")
-private val CZECH_HINTS = setOf("je", "se", "na", "pro", "ze", "do", "nebo", "jako", "vstup")
-private val SPANISH_HINTS = setOf("el", "la", "los", "las", "de", "es", "para", "con", "una", "salida")
-private val PORTUGUESE_HINTS = setOf("os", "as", "de", "para", "com", "uma", "saida")
-private val POLISH_HINTS = setOf("na", "do", "jest", "dla", "oraz", "nie", "wejscie")
-private val TURKISH_HINTS = setOf("ve", "bir", "icin", "ile", "bu", "da", "de")
-private val VIETNAMESE_HINTS = setOf("va", "la", "cua", "cho", "mot", "voi", "khong")
-
-private val ENGLISH_CHARS = emptySet<Char>()
-private val FRENCH_CHARS = setOf('\u00e0', '\u00e2', '\u00e7', '\u00e8', '\u00e9', '\u00ea', '\u00eb', '\u00ee', '\u00ef', '\u00f4', '\u00f9', '\u00fb', '\u0153', '\u00e6')
-private val GERMAN_CHARS = setOf('\u00e4', '\u00f6', '\u00fc', '\u00df')
-private val CZECH_CHARS = setOf('\u00e1', '\u010d', '\u010f', '\u00e9', '\u011b', '\u00ed', '\u0148', '\u00f3', '\u0159', '\u0161', '\u0165', '\u00fa', '\u016f', '\u00fd', '\u017e')
-private val SPANISH_CHARS = setOf('\u00e1', '\u00e9', '\u00ed', '\u00f1', '\u00f3', '\u00fa', '\u00fc')
-private val PORTUGUESE_CHARS = setOf('\u00e1', '\u00e2', '\u00e3', '\u00e0', '\u00e7', '\u00e9', '\u00ea', '\u00ed', '\u00f3', '\u00f4', '\u00f5', '\u00fa')
-private val POLISH_CHARS = setOf('\u0105', '\u0107', '\u0119', '\u0142', '\u0144', '\u00f3', '\u015b', '\u017a', '\u017c')
-private val TURKISH_CHARS = setOf('\u00e7', '\u011f', '\u0131', '\u00f6', '\u015f', '\u00fc')
-private val VIETNAMESE_CHARS = setOf('\u0103', '\u00e2', '\u00ea', '\u00f4', '\u01a1', '\u01b0', '\u0111')
-private val UKRAINIAN_CHARS = setOf('\u0456', '\u0457', '\u0454', '\u0491', '\u0406', '\u0407', '\u0404', '\u0490')
 
 private data class LiveTextTrack(
     val id: Int,

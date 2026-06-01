@@ -50,6 +50,16 @@ fun TranslationScreen(
 
     var showSourceLangPicker by remember { mutableStateOf(false) }
     var showTargetLangPicker by remember { mutableStateOf(false) }
+    val sourceChipLabel = if (uiState.isSourceAuto) {
+        val detected = uiState.detectedSourceLanguage
+        when {
+            uiState.isDetectingSourceLanguage -> "Auto..."
+            detected != null -> "Auto: ${detected.flag} ${detected.nativeName}"
+            else -> "Auto"
+        }
+    } else {
+        "${uiState.sourceLanguage.flag} ${uiState.sourceLanguage.nativeName}"
+    }
 
     // Auto-load model on first launch
     LaunchedEffect(Unit) { viewModel.loadModel() }
@@ -96,11 +106,12 @@ fun TranslationScreen(
 
             // Language selector row
             LanguageSelectorRow(
-                sourceLanguage = uiState.sourceLanguage,
+                sourceLabel = sourceChipLabel,
                 targetLanguage = uiState.targetLanguage,
                 onSourceClick = { showSourceLangPicker = true },
                 onTargetClick = { showTargetLangPicker = true },
                 onSwap = { viewModel.swapLanguages() },
+                swapEnabled = !uiState.isSourceAuto,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
 
@@ -317,6 +328,13 @@ fun TranslationScreen(
         LanguagePickerSheet(
             selectedLanguage = uiState.sourceLanguage,
             excludeLanguage = uiState.targetLanguage,
+            autoOptionLabel = "Auto",
+            autoOptionDescription = "Определять язык по введенному тексту",
+            isAutoSelected = uiState.isSourceAuto,
+            onAutoSelected = {
+                viewModel.setSourceAuto()
+                showSourceLangPicker = false
+            },
             onLanguageSelected = {
                 viewModel.setSourceLanguage(it)
                 showSourceLangPicker = false
@@ -328,7 +346,7 @@ fun TranslationScreen(
     if (showTargetLangPicker) {
         LanguagePickerSheet(
             selectedLanguage = uiState.targetLanguage,
-            excludeLanguage = uiState.sourceLanguage,
+            excludeLanguage = if (uiState.isSourceAuto) null else uiState.sourceLanguage,
             onLanguageSelected = {
                 viewModel.setTargetLanguage(it)
                 showTargetLangPicker = false
@@ -340,11 +358,12 @@ fun TranslationScreen(
 
 @Composable
 private fun LanguageSelectorRow(
-    sourceLanguage: Language,
+    sourceLabel: String,
     targetLanguage: Language,
     onSourceClick: () -> Unit,
     onTargetClick: () -> Unit,
     onSwap: () -> Unit,
+    swapEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -355,7 +374,7 @@ private fun LanguageSelectorRow(
         // Source language chip
         AssistChip(
             onClick = onSourceClick,
-            label = { Text("${sourceLanguage.flag} ${sourceLanguage.nativeName}") },
+            label = { Text(sourceLabel) },
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(12.dp)
         )
@@ -363,15 +382,20 @@ private fun LanguageSelectorRow(
         // Swap button
         IconButton(
             onClick = onSwap,
+            enabled = swapEnabled,
             modifier = Modifier
                 .padding(horizontal = 4.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = if (swapEnabled) 0.1f else 0.04f))
         ) {
             Icon(
                 Icons.Filled.SwapHoriz,
                 contentDescription = "Swap languages",
-                tint = MaterialTheme.colorScheme.primary
+                tint = if (swapEnabled) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
         }
 

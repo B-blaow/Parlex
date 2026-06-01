@@ -1,16 +1,16 @@
-# llama.cpp B9219 Native And MTP Check
+# llama.cpp B9464 Native And MTP Check
 
 ## Engine Revision
 
 - Local engine path: `app/src/main/cpp/llama.cpp/`.
-- Upstream tag: `b9219`.
-- Upstream commit: `45b455e66fc09abed65b7d52d42a4a29ba0d45d6`.
+- Upstream tag: `b9464`.
+- Upstream commit: `5dcb71166686799f0d873eab7386234302d05ecf`.
 - The engine folder is intentionally ignored by the app repository, so
   `app/src/main/cpp/llama.cpp.version` records the expected checkout.
 
 ## Native Android Status
 
-- The existing JNI bridge compiles against B9219 without source changes.
+- The existing JNI bridge compiles against B9464 without source changes.
 - The active native path remains `TranslationEngine` -> `translive_jni.cpp` ->
   `llama.cpp` -> GGUF.
 - Current JNI still performs normal target-model decoding:
@@ -18,9 +18,9 @@
 - The app does not currently link the llama.cpp `llama-common` target and does
   not use the upstream speculative helpers from `common/speculative.*`.
 
-## B9219 MTP Status
+## B9464 MTP Status
 
-B9219 includes upstream speculative decoding support for MTP:
+B9464 includes upstream speculative decoding support for MTP:
 
 - `common/common.h` defines `COMMON_SPECULATIVE_TYPE_DRAFT_MTP`.
 - `common/speculative.cpp` maps `draft-mtp` and implements the MTP draft path.
@@ -41,7 +41,7 @@ settings/catalog controls, and phone benchmarks.
 2. Add model pairing rules: target GGUF plus compatible MTP draft GGUF/head.
 3. Link `llama-common` only if the Android build remains stable and does not
    pull in unnecessary CLI/server code.
-4. Port the B9219 speculative decode loop into `translive_jni.cpp` behind a
+4. Port the B9464 speculative decode loop into `translive_jni.cpp` behind a
    beta runtime flag.
 5. Benchmark normal decode vs MTP on the Snapdragon 8 Elite phone using the
    same prompts, languages, quantization, and max-token limits.

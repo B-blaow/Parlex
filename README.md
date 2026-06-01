@@ -14,7 +14,7 @@
   <a href="#"><img src="https://img.shields.io/badge/API-26+-brightgreen" /></a>
   <a href="#"><img src="https://img.shields.io/badge/Arch-arm64--v8a-blue" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/Version-1.3.0-orange" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/Version-1.3.2--beta.1-orange" /></a>
 </p>
 
 <p align="center">
@@ -38,7 +38,7 @@
 | 🔊 | **Озвучка** | Перевод читается вслух (System TTS) |
 | 📝 | **История** | Полная история переводов с поиском, фильтрами и избранным |
 | ⭐ | **Избранное** | Отмечай важные переводы для быстрого доступа |
-| 📦 | **Менеджер моделей** | 2 семейства моделей: Tencent Hy-MT (12 квантизаций) + Google TranslateGemma (5 квантизаций) |
+| 📦 | **Менеджер моделей** | Tencent HY-MT 1.5/Hy-MT2 + Google TranslateGemma, включая LiteRT Beta |
 | ⚙️ | **Настройки** | Потоки CPU, бэкенд, авто-выгрузка модели |
 
 ---
@@ -73,8 +73,8 @@
 |:--|:--|
 | **UI** | Kotlin + Jetpack Compose (Material 3, Dynamic Color) |
 | **Навигация** | 4 вкладки: Текст · Диалог · Модели · Настройки |
-| **Перевод** | [llama.cpp](https://github.com/ggerganov/llama.cpp) — GGUF модели через JNI |
-| **Модели** | [Tencent Hy-MT 1.5 1.8B](https://huggingface.co/tencent/Hy-MT1.5-1.8B) + [Google TranslateGemma 4B](https://huggingface.co/google/translate-gemma-4b-it) |
+| **Перевод** | [llama.cpp](https://github.com/ggml-org/llama.cpp) — GGUF модели через JNI |
+| **Модели** | [Tencent HY-MT 1.5 1.8B](https://huggingface.co/tencent/HY-MT1.5-1.8B-GGUF), [Tencent Hy-MT2](https://huggingface.co/collections/tencent/hy-mt2) + [Google TranslateGemma 4B](https://huggingface.co/google/translate-gemma-4b-it) |
 | **Распознавание речи** | Whisper Tiny (Sherpa-ONNX) + Silero VAD v5 |
 | **Синтез речи** | Android System TTS |
 | **Хранение** | Room DB — история, сессии, избранное |
@@ -95,26 +95,23 @@
 
 ## 📦 Модели перевода
 
-### Tencent Hy-MT 1.5 1.8B — 33 языка
+### Tencent HY-MT 1.5 1.8B — 33 языка
 
 | Квантизация | Размер | RAM | Качество |
 |:--|:--|:--|:--|
-| 2-bit (Tencent) | 574 МБ | ~1 ГБ | ★★☆☆☆ |
-| Q2_K | ~680 МБ | ~1.1 ГБ | ★★☆☆☆ |
-| IQ3_XS | ~750 МБ | ~1.2 ГБ | ★★★☆☆ |
-| IQ3_M | ~800 МБ | ~1.3 ГБ | ★★★☆☆ |
-| Q3_K_M | ~850 МБ | ~1.3 ГБ | ★★★☆☆ |
-| IQ4_XS | ~930 МБ | ~1.4 ГБ | ★★★★☆ |
-| **Q4_K_M** | **~1.0 ГБ** | **~1.5 ГБ** | **★★★★☆ рекомендуется** |
-| Q5_K_M | ~1.2 ГБ | ~1.7 ГБ | ★★★★☆ |
-| Q6_K | ~1.4 ГБ | ~1.9 ГБ | ★★★★★ |
-| Q8_0 | ~1.9 ГБ | ~2.4 ГБ | ★★★★★ |
-| F16 | ~3.6 ГБ | ~4.1 ГБ | ★★★★★ |
-| BF16 | ~3.6 ГБ | ~4.1 ГБ | ★★★★★ |
+| 1.25bit (Tencent) | 440 МБ | ~0.9 ГБ | ★★☆☆☆ |
+| 2bit (Tencent) | 573 МБ | ~1.1 ГБ | ★★★☆☆ |
+| **Q4_K_M** | **1.05 ГБ** | **~1.8 ГБ** | **★★★★☆ рекомендуется** |
+| Q6_K | 1.37 ГБ | ~2.3 ГБ | ★★★★★ |
+| Q8_0 | 1.78 ГБ | ~2.8 ГБ | ★★★★★ |
+
+### Tencent Hy-MT2 — 33 языка
+
+Hy-MT2 добавлен как актуальная Tencent-линейка: мобильная 1.8B семья и качественная 7B семья. Репозитории Hy-MT2 сейчас опубликованы Tencent с Apache 2.0 metadata.
 
 ### Google TranslateGemma 4B — 5 вариантов
 
-Специализированная модель перевода от Google (Gemma 3 architecture).
+Специализированная модель перевода от Google (Gemma 3 architecture). GGUF остается стабильным путем, LiteRT-LM помечен как beta runtime.
 
 ---
 
@@ -170,7 +167,7 @@
 ### Требования
 
 - Android Studio Ladybug 2024.2+
-- Android SDK 35 + NDK r27d (27.3.13750724)
+- Android SDK 36 + NDK r27d (27.3.13750724)
 - CMake 3.14+
 - Устройство: `arm64-v8a`, Android 8.0+ (API 26)
 
@@ -186,7 +183,7 @@ cd Parlex
 ```bash
 # llama.cpp (перевод)
 cd app/src/main/cpp
-git clone --branch b9219 --depth 1 https://github.com/ggerganov/llama.cpp.git
+git clone --branch b9464 --depth 1 https://github.com/ggml-org/llama.cpp.git
 cd ../../../..
 ```
 
@@ -266,8 +263,13 @@ app/src/main/
 
 **Код приложения** — [MIT License](LICENSE)
 
-**Модель перевода** — [Tencent HY Community License](https://huggingface.co/tencent/Hy-MT1.5-1.8B-2bit-GGUF).  
-Модель **не включена** в репозиторий. Пользователь должен скачать её самостоятельно и принять лицензию модели.
+**Tencent HY-MT 1.5** — [Tencent HY Community License](https://huggingface.co/tencent/Hy-MT1.5-1.8B-2bit-GGUF).
+
+**Tencent Hy-MT2** — [Apache 2.0](https://huggingface.co/collections/tencent/hy-mt2).
+
+**Google TranslateGemma** — [Gemma Terms of Use](https://huggingface.co/google/translate-gemma-4b-it).
+
+Модели **не включены** в репозиторий. Пользователь должен скачать их самостоятельно и принять соответствующую лицензию.
 
 > ⚠️ Лицензия модели Tencent **не покрывает** ЕС, Великобританию и Южную Корею.
 

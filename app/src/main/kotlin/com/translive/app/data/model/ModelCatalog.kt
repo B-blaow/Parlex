@@ -18,26 +18,21 @@ object ModelCatalog {
     // ─── HY-MT 1.5 1.8B (Tencent) ────────────────────────────────────
 
     private fun hyMtFamily(): ModelFamily {
-        val b = "https://huggingface.co/mradermacher/HY-MT1.5-1.8B-GGUF/resolve/main"
-        val p = "HY-MT1.5-1.8B"
+        val compact = "https://huggingface.co/tencent/HY-MT1.5-1.8B-GGUF/resolve/main"
+        val bit125 = "https://huggingface.co/tencent/Hy-MT1.5-1.8B-1.25bit-GGUF/resolve/main"
+        val bit2 = "https://huggingface.co/tencent/Hy-MT1.5-1.8B-2bit-GGUF/resolve/main"
         return ModelFamily(
             id = "hy_mt", name = "HY-MT 1.5 1.8B", developer = "Tencent",
-            description = "Специализирован на перевод, 33 языка",
+            description = "Специализирован на перевод, 33 языка, official Tencent GGUF",
             languageCount = 33, parameterSize = "1.8B",
             promptStyle = PromptStyle.HY_MT, license = ModelLicense.TENCENT_HY_COMMUNITY,
             isSpecialized = true,
             variants = listOf(
-                v("hy_mt:q2_k","Q2_K","Минимальная","2-bit",777_000_000L,1228,"$b/$p.Q2_K.gguf?download=true","$p.Q2_K.gguf"),
-                v("hy_mt:q3_k_s","Q3_K_S","Компактная","3-bit, маленький",872_000_000L,1400,"$b/$p.Q3_K_S.gguf?download=true","$p.Q3_K_S.gguf"),
-                v("hy_mt:q3_k_m","Q3_K_M","Баланс 3-bit","3-bit средний",951_000_000L,1500,"$b/$p.Q3_K_M.gguf?download=true","$p.Q3_K_M.gguf"),
-                v("hy_mt:q3_k_l","Q3_K_L","Улучшенная 3-bit","3-bit большой",1_020_000_000L,1600,"$b/$p.Q3_K_L.gguf?download=true","$p.Q3_K_L.gguf"),
-                v("hy_mt:iq4_xs","IQ4_XS","iMatrix 4-bit","4-bit iMatrix",1_040_000_000L,1600,"$b/$p.IQ4_XS.gguf?download=true","$p.IQ4_XS.gguf"),
-                v("hy_mt:q4_k_s","Q4_K_S","Стандартная 4-bit","4-bit",1_080_000_000L,1700,"$b/$p.Q4_K_S.gguf?download=true","$p.Q4_K_S.gguf"),
-                v("hy_mt:q4_k_m","Q4_K_M","Рекомендуемая","Лучший баланс",1_130_000_000L,1800,"$b/$p.Q4_K_M.gguf?download=true","$p.Q4_K_M.gguf",true),
-                v("hy_mt:q5_k_m","Q5_K_M","Высокое качество","5-bit",1_300_000_000L,2100,"$b/$p.Q5_K_M.gguf?download=true","$p.Q5_K_M.gguf"),
-                v("hy_mt:q6_k","Q6_K","Премиум","6-bit, почти без потерь",1_470_000_000L,2300,"$b/$p.Q6_K.gguf?download=true","$p.Q6_K.gguf"),
-                v("hy_mt:q8_0","Q8_0","Максимальная точность","8-bit",1_910_000_000L,2800,"$b/$p.Q8_0.gguf?download=true","$p.Q8_0.gguf"),
-                v("hy_mt:f16","F16","Полная","FP16, без квантизации",3_590_000_000L,4500,"$b/$p.f16.gguf?download=true","$p.f16.gguf")
+                v("hy_mt:1_25bit","1.25bit","Ультракомпактная","AngelSlim 1.25-bit, official Tencent",461_861_216L,900,"$bit125/Hy-MT1.5-1.8B-1.25bit.gguf?download=true","Hy-MT1.5-1.8B-1.25bit.gguf"),
+                v("hy_mt:2bit","2bit","Минимальная","AngelSlim 2-bit, official Tencent",600_534_880L,1_100,"$bit2/Hy-MT1.5-1.8B-2bit.gguf?download=true","Hy-MT1.5-1.8B-2bit.gguf"),
+                v("hy_mt:q4_k_m","Q4_K_M","Рекомендуемая","4-bit, official Tencent",1_133_080_512L,1_800,"$compact/HY-MT1.5-1.8B-Q4_K_M.gguf?download=true","HY-MT1.5-1.8B-Q4_K_M.gguf",true),
+                v("hy_mt:q6_k","Q6_K","Премиум","6-bit, почти без потерь",1_474_785_216L,2_300,"$compact/HY-MT1.5-1.8B-Q6_K.gguf?download=true","HY-MT1.5-1.8B-Q6_K.gguf"),
+                v("hy_mt:q8_0","Q8_0","Максимальная точность","8-bit",1_908_528_288L,2_800,"$compact/HY-MT1.5-1.8B-Q8_0.gguf?download=true","HY-MT1.5-1.8B-Q8_0.gguf")
             )
         )
     }
@@ -52,7 +47,7 @@ object ModelCatalog {
             id = "hy_mt2_1_8b", name = "Hy-MT2 1.8B", developer = "Tencent",
             description = "Fast-thinking перевод, 33 языка, мобильные GGUF",
             languageCount = 33, parameterSize = "1.8B",
-            promptStyle = PromptStyle.HY_MT2, license = ModelLicense.TENCENT_HY_COMMUNITY,
+            promptStyle = PromptStyle.HY_MT2, license = ModelLicense.APACHE_2,
             isSpecialized = true,
             variants = listOf(
                 v(
@@ -118,7 +113,7 @@ object ModelCatalog {
             id = "hy_mt2_7b", name = "Hy-MT2 7B", developer = "Tencent",
             description = "Fast-thinking перевод, 33 языка, высокий класс качества",
             languageCount = 33, parameterSize = "7B",
-            promptStyle = PromptStyle.HY_MT2, license = ModelLicense.TENCENT_HY_COMMUNITY,
+            promptStyle = PromptStyle.HY_MT2, license = ModelLicense.APACHE_2,
             isSpecialized = true,
             variants = listOf(
                 v(

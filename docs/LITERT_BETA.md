@@ -18,9 +18,9 @@ This spike is measurement-driven: LiteRT moves forward only if it beats the curr
 
 - Model family: TranslateGemma.
 - Beta format: LiteRT-LM `.litertlm`, not a normal `.tflite` tensor model.
-- Android dependency in the app now: `com.google.ai.edge.litertlm:litertlm-android:0.11.0`.
-- LiteRT-LM `0.11.0` requires a newer Kotlin toolchain than the previous app baseline, so the app now uses Kotlin/KSP `2.2.21`.
-- Annotation processors were kept compatible with that toolchain: Room `2.8.4`, Hilt `2.57.2`. Hilt `2.59.2` requires AGP 9 and is not compatible with the current AGP `8.7.3` baseline.
+- Android dependency in the app now: `com.google.ai.edge.litertlm:litertlm-android:0.12.0`.
+- LiteRT-LM `0.12.0` keeps the newer Kotlin toolchain requirement from the previous beta baseline, so the app remains on Kotlin/KSP `2.2.21`.
+- Annotation processors were kept compatible with that toolchain: Room `2.8.4`, Hilt `2.57.2`. Hilt `2.59.2` requires AGP 9.0+ and is not compatible with the current AGP `8.9.1` baseline.
 - Non-LLM LiteRT dependency candidate for plain `.tflite` experiments: `com.google.ai.edge.litert:litert:2.1.5`.
 - Backends to benchmark: CPU, GPU, NPU.
 - The in-app beta loader tries the selected LiteRT backend first and falls back to CPU if GPU/NPU is unavailable.

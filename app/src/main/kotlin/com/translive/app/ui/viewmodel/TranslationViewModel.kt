@@ -10,6 +10,7 @@ import com.translive.app.data.db.TranslationDao
 import com.translive.app.data.model.Language
 import com.translive.app.data.model.ModelRuntime
 import com.translive.app.data.model.TranslationEntry
+import com.translive.app.engine.LanguageDetectionEngine
 import com.translive.app.engine.LiteRtTranslationEngine
 import com.translive.app.engine.TranslationEngine
 import com.translive.app.engine.SystemTtsEngine
@@ -27,6 +28,9 @@ data class TranslationStats(
 
 data class TranslationUiState(
     val sourceLanguage: Language = Language.RUSSIAN,
+    val isSourceAuto: Boolean = false,
+    val detectedSourceLanguage: Language? = null,
+    val isDetectingSourceLanguage: Boolean = false,
     val targetLanguage: Language = Language.ENGLISH,
     val sourceText: String = "",
     val translatedText: String = "",
@@ -42,6 +46,7 @@ data class TranslationUiState(
 class TranslationViewModel @Inject constructor(
     private val app: Application,
     private val engine: TranslationEngine,
+    private val languageDetectionEngine: LanguageDetectionEngine,
     private val liteRtEngine: LiteRtTranslationEngine,
     private val translationDao: TranslationDao,
     private val modelRepository: ModelRepository,
@@ -54,6 +59,7 @@ class TranslationViewModel @Inject constructor(
         TranslationUiState(
             sourceText = savedStateHandle["sourceText"] ?: "",
             translatedText = savedStateHandle["translatedText"] ?: "",
+            isSourceAuto = savedStateHandle.get<Boolean>("srcAuto") ?: false,
             sourceLanguage = savedStateHandle.get<String>("srcLang")?.let { code ->
                 Language.entries.find { it.code == code }
             } ?: Language.RUSSIAN,
@@ -74,6 +80,7 @@ class TranslationViewModel @Inject constructor(
 
     /** Job for idle auto-unload timer. Reset on each translation. */
     private var idleTimerJob: Job? = null
+    private var sourceDetectionJob: Job? = null
 
     fun loadModel() {
         if (_uiState.value.isModelLoaded || _uiState.value.isModelLoading) return
@@ -136,11 +143,33 @@ class TranslationViewModel @Inject constructor(
     fun setSourceText(text: String) {
         _uiState.update { it.copy(sourceText = text) }
         savedStateHandle["sourceText"] = text
+        scheduleSourceLanguageDetection(text)
     }
 
     fun setSourceLanguage(lang: Language) {
-        _uiState.update { it.copy(sourceLanguage = lang) }
+        _uiState.update {
+            it.copy(
+                sourceLanguage = lang,
+                isSourceAuto = false,
+                detectedSourceLanguage = null,
+                isDetectingSourceLanguage = false
+            )
+        }
         savedStateHandle["srcLang"] = lang.code
+        savedStateHandle["srcAuto"] = false
+        sourceDetectionJob?.cancel()
+    }
+
+    fun setSourceAuto() {
+        _uiState.update {
+            it.copy(
+                isSourceAuto = true,
+                detectedSourceLanguage = null,
+                isDetectingSourceLanguage = it.sourceText.isNotBlank()
+            )
+        }
+        savedStateHandle["srcAuto"] = true
+        scheduleSourceLanguageDetection(_uiState.value.sourceText)
     }
 
     fun setTargetLanguage(lang: Language) {
@@ -149,6 +178,8 @@ class TranslationViewModel @Inject constructor(
     }
 
     fun swapLanguages() {
+        if (_uiState.value.isSourceAuto) return
+
         _uiState.update {
             it.copy(
                 sourceLanguage = it.targetLanguage,
@@ -157,6 +188,11 @@ class TranslationViewModel @Inject constructor(
                 translatedText = it.sourceText
             )
         }
+        val state = _uiState.value
+        savedStateHandle["srcLang"] = state.sourceLanguage.code
+        savedStateHandle["tgtLang"] = state.targetLanguage.code
+        savedStateHandle["sourceText"] = state.sourceText
+        savedStateHandle["translatedText"] = state.translatedText
     }
 
     fun translate() {
@@ -185,6 +221,7 @@ class TranslationViewModel @Inject constructor(
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                val effectiveSourceLanguage = resolveSourceLanguageForTranslation(state)
                 val startTime = System.currentTimeMillis()
                 val textBuilder = StringBuilder()
                 var streamResult: TranslationEngine.StreamResult? = null
@@ -192,7 +229,7 @@ class TranslationViewModel @Inject constructor(
                 if (runtime == ModelRuntime.LITERT_LM) {
                     liteRtEngine.translateStreaming(
                         sourceText = state.sourceText,
-                        source = state.sourceLanguage,
+                        source = effectiveSourceLanguage,
                         target = state.targetLanguage
                     ).collect { token ->
                         textBuilder.append(token)
@@ -204,7 +241,7 @@ class TranslationViewModel @Inject constructor(
                     try {
                         engine.translateStreaming(
                             sourceText = state.sourceText,
-                            source = state.sourceLanguage,
+                            source = effectiveSourceLanguage,
                             target = state.targetLanguage,
                             onComplete = { streamResult = it }
                         ).collect { token ->
@@ -238,7 +275,7 @@ class TranslationViewModel @Inject constructor(
                 // Save to history
                 translationDao.insertTranslation(
                     TranslationEntry(
-                        sourceLanguage = state.sourceLanguage.code,
+                        sourceLanguage = effectiveSourceLanguage.code,
                         targetLanguage = state.targetLanguage.code,
                         sourceText = state.sourceText,
                         translatedText = result
@@ -253,6 +290,50 @@ class TranslationViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun scheduleSourceLanguageDetection(text: String) {
+        sourceDetectionJob?.cancel()
+        if (!_uiState.value.isSourceAuto) return
+
+        val normalized = text.trim()
+        if (normalized.isBlank()) {
+            _uiState.update {
+                it.copy(detectedSourceLanguage = null, isDetectingSourceLanguage = false)
+            }
+            return
+        }
+
+        sourceDetectionJob = viewModelScope.launch {
+            _uiState.update { it.copy(isDetectingSourceLanguage = true) }
+            delay(350)
+            val detected = withContext(Dispatchers.Default) {
+                languageDetectionEngine.detect(normalized, _uiState.value.sourceLanguage)
+            }
+            _uiState.update {
+                if (it.isSourceAuto && it.sourceText.trim() == normalized) {
+                    it.copy(
+                        detectedSourceLanguage = detected,
+                        isDetectingSourceLanguage = false
+                    )
+                } else {
+                    it
+                }
+            }
+        }
+    }
+
+    private suspend fun resolveSourceLanguageForTranslation(state: TranslationUiState): Language {
+        if (!state.isSourceAuto) return state.sourceLanguage
+
+        val detected = languageDetectionEngine.detect(state.sourceText, state.sourceLanguage)
+        _uiState.update {
+            it.copy(
+                detectedSourceLanguage = detected,
+                isDetectingSourceLanguage = false
+            )
+        }
+        return detected
     }
 
     /**
@@ -296,6 +377,7 @@ class TranslationViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         idleTimerJob?.cancel()
+        sourceDetectionJob?.cancel()
         // Do NOT call engine.unloadModel() — engine is a @Singleton shared
         // with DialogueViewModel and CameraViewModel
     }
