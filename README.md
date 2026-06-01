@@ -14,7 +14,7 @@
   <a href="#"><img src="https://img.shields.io/badge/API-26+-brightgreen" /></a>
   <a href="#"><img src="https://img.shields.io/badge/Arch-arm64--v8a-blue" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/Version-1.3.2--beta.1-orange" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/Version-1.4.0--beta.1-orange" /></a>
 </p>
 
 <p align="center">
