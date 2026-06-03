@@ -13,6 +13,7 @@ import android.text.TextUtils
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.translive.app.R
 import com.translive.app.data.SettingsRepository
 import com.translive.app.data.model.Language
 import com.translive.app.engine.CameraTranslateEngine
@@ -345,7 +346,7 @@ class CameraViewModel @Inject constructor(
             }
             val ok = cameraTranslateEngine.prepare(state.sourceLanguage.code, state.targetLanguage.code)
             if (!ok) {
-                _uiState.update { it.copy(nmtError = "Модель перевода не скачана") }
+                _uiState.update { it.copy(nmtError = appContext.getString(R.string.error_camera_translation_model_missing)) }
             } else {
                 _uiState.update { it.copy(nmtError = null) }
             }
@@ -363,7 +364,7 @@ class CameraViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 captureStatus = CaptureStatus.PROCESSING,
-                captureMessage = "Снимаю кадр",
+                captureMessage = appContext.getString(R.string.camera_capture_taking),
                 detectedSourceLanguage = null,
                 detectedSourceLanguages = emptyList(),
                 qualityWarnings = emptyList()
@@ -371,11 +372,11 @@ class CameraViewModel @Inject constructor(
         }
     }
 
-    fun failFullResolutionCapture(message: String = "Не удалось снять кадр") {
+    fun failFullResolutionCapture(message: String? = null) {
         _uiState.update {
             it.copy(
                 captureStatus = CaptureStatus.ERROR,
-                captureMessage = message,
+                captureMessage = message ?: appContext.getString(R.string.camera_capture_failed),
                 detectedSourceLanguage = null,
                 detectedSourceLanguages = emptyList(),
                 qualityWarnings = emptyList()
@@ -395,7 +396,7 @@ class CameraViewModel @Inject constructor(
                 paintedBitmap = null,
                 liveBlocks = emptyList(),
                 captureStatus = CaptureStatus.PROCESSING,
-                captureMessage = "Открываю фото",
+                captureMessage = appContext.getString(R.string.camera_capture_opening_photo),
                 detectedSourceLanguage = null,
                 detectedSourceLanguages = emptyList(),
                 qualityWarnings = emptyList()
@@ -408,7 +409,7 @@ class CameraViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         captureStatus = CaptureStatus.ERROR,
-                        captureMessage = "Не удалось открыть фото",
+                        captureMessage = appContext.getString(R.string.camera_capture_open_photo_failed),
                         qualityWarnings = emptyList()
                     )
                 }
@@ -418,7 +419,7 @@ class CameraViewModel @Inject constructor(
             val workBitmap = prepareCaptureBitmap(bitmap)
             enterCaptureMode(
                 workBitmap = workBitmap,
-                message = "Ищу текст на фото",
+                message = appContext.getString(R.string.camera_capture_finding_text_photo),
                 cancelExistingJob = false
             )
             processCaptureBitmap(
@@ -666,7 +667,7 @@ class CameraViewModel @Inject constructor(
                 if (ok) {
                     it.copy(nmtError = null)
                 } else {
-                    it.copy(nmtError = "Модель перевода не скачана")
+                    it.copy(nmtError = appContext.getString(R.string.error_camera_translation_model_missing))
                 }
             }
         }
@@ -682,7 +683,7 @@ class CameraViewModel @Inject constructor(
             if (ok) {
                 it.copy(nmtError = null)
             } else {
-                it.copy(nmtError = "Модель перевода не скачана")
+                it.copy(nmtError = appContext.getString(R.string.error_camera_translation_model_missing))
             }
         }
     }
@@ -758,7 +759,7 @@ class CameraViewModel @Inject constructor(
     private fun captureBitmap(bitmap: Bitmap?) {
         if (bitmap == null) {
             isCaptureStarting = false
-            failFullResolutionCapture("Кадр камеры пока недоступен")
+            failFullResolutionCapture(appContext.getString(R.string.camera_frame_unavailable))
             return
         }
 
@@ -792,7 +793,7 @@ class CameraViewModel @Inject constructor(
 
     private fun enterCaptureMode(
         workBitmap: Bitmap,
-        message: String = "Ищу текст на снимке",
+        message: String? = null,
         cancelExistingJob: Boolean = true
     ) {
         isCaptureStarting = false
@@ -806,7 +807,7 @@ class CameraViewModel @Inject constructor(
                 paintedBitmap = workBitmap,
                 liveBlocks = emptyList(),
                 captureStatus = CaptureStatus.PROCESSING,
-                captureMessage = message,
+                captureMessage = message ?: appContext.getString(R.string.camera_capture_finding_text),
                 detectedSourceLanguage = null,
                 detectedSourceLanguages = emptyList(),
                 qualityWarnings = emptyList()
@@ -921,7 +922,7 @@ class CameraViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         captureStatus = CaptureStatus.EMPTY,
-                        captureMessage = "Текст не найден",
+                        captureMessage = appContext.getString(R.string.camera_capture_text_not_found),
                         detectedSourceLanguage = if (sourceAuto) effectiveSourceLanguage else null,
                         detectedSourceLanguages = if (sourceAuto) captureOcr.detectedSourceLanguages else emptyList(),
                         qualityWarnings = qualityWarnings
@@ -952,7 +953,7 @@ class CameraViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         captureStatus = CaptureStatus.EMPTY,
-                        captureMessage = "Подходящие строки не найдены",
+                        captureMessage = appContext.getString(R.string.camera_capture_no_suitable_lines),
                         detectedSourceLanguage = if (sourceAuto) effectiveSourceLanguage else null,
                         detectedSourceLanguages = if (sourceAuto) captureOcr.detectedSourceLanguages else emptyList(),
                         qualityWarnings = qualityWarnings
@@ -961,7 +962,7 @@ class CameraViewModel @Inject constructor(
                 return
             }
 
-            _uiState.update { it.copy(captureMessage = "Перевожу найденные строки") }
+            _uiState.update { it.copy(captureMessage = appContext.getString(R.string.camera_capture_translating_lines)) }
 
             if (!translationEngine.isLoaded) {
                 prepareCaptureTranslateModel(effectiveSourceLanguage, targetLanguage)
@@ -984,7 +985,7 @@ class CameraViewModel @Inject constructor(
             val translatedParts: List<String>
             val painted: Bitmap
             if (useDocumentLayout) {
-                _uiState.update { it.copy(captureMessage = "Перевожу страницу по абзацам") }
+                _uiState.update { it.copy(captureMessage = appContext.getString(R.string.camera_capture_translating_page)) }
                 val regions = buildDocumentRegions(captureBlocks)
                 val regionTranslations = translateCaptureDocumentRegions(
                     regions = regions,
@@ -1024,7 +1025,7 @@ class CameraViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     captureStatus = CaptureStatus.ERROR,
-                    captureMessage = "Ошибка обработки снимка",
+                    captureMessage = appContext.getString(R.string.camera_capture_processing_error),
                     detectedSourceLanguage = null,
                     detectedSourceLanguages = emptyList(),
                     qualityWarnings = emptyList()

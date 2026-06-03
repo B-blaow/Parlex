@@ -12,13 +12,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.translive.app.R
 import com.translive.app.data.SettingsRepository
+import com.translive.app.i18n.LocaleHelper
 import com.translive.app.ui.components.AppBottomNavigation
 import com.translive.app.ui.components.BottomNavDestination
 import com.translive.app.ui.viewmodel.SettingsViewModel
@@ -32,6 +39,8 @@ fun SettingsScreen(
     onNavigateToModels: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val appLanguage by viewModel.appLanguage.collectAsState()
     val threads by viewModel.threads.collectAsState()
     val timeoutMinutes by viewModel.idleTimeout.collectAsState()
     val backend by viewModel.backend.collectAsState()
@@ -70,7 +79,7 @@ fun SettingsScreen(
                     .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
                 Text(
-                    text = "Настройки",
+                    text = stringResource(R.string.settings_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
@@ -79,15 +88,71 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // --- Language section ---
+            SectionHeader(icon = Icons.Outlined.Language, title = stringResource(R.string.settings_language_section))
+            SettingsCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                Text(stringResource(R.string.settings_app_language), style = MaterialTheme.typography.titleSmall)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.settings_app_language_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                AppLanguageOption(
+                    label = stringResource(R.string.settings_language_system),
+                    selected = appLanguage == LocaleHelper.SYSTEM,
+                    onClick = {
+                        viewModel.setAppLanguage(LocaleHelper.SYSTEM)
+                        context.findActivity()?.recreate()
+                    }
+                )
+                AppLanguageOption(
+                    label = stringResource(R.string.settings_language_english),
+                    selected = appLanguage == LocaleHelper.ENGLISH,
+                    onClick = {
+                        viewModel.setAppLanguage(LocaleHelper.ENGLISH)
+                        context.findActivity()?.recreate()
+                    }
+                )
+                AppLanguageOption(
+                    label = stringResource(R.string.settings_language_russian),
+                    selected = appLanguage == LocaleHelper.RUSSIAN,
+                    onClick = {
+                        viewModel.setAppLanguage(LocaleHelper.RUSSIAN)
+                        context.findActivity()?.recreate()
+                    }
+                )
+                AppLanguageOption(
+                    label = stringResource(R.string.settings_language_zh_cn),
+                    selected = appLanguage == LocaleHelper.CHINESE_SIMPLIFIED,
+                    onClick = {
+                        viewModel.setAppLanguage(LocaleHelper.CHINESE_SIMPLIFIED)
+                        context.findActivity()?.recreate()
+                    }
+                )
+                AppLanguageOption(
+                    label = stringResource(R.string.settings_language_zh_tw),
+                    selected = appLanguage == LocaleHelper.CHINESE_TRADITIONAL,
+                    onClick = {
+                        viewModel.setAppLanguage(LocaleHelper.CHINESE_TRADITIONAL)
+                        context.findActivity()?.recreate()
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             // --- Compute section ---
-            SectionHeader(icon = Icons.Outlined.Memory, title = "Вычисления")
+            SectionHeader(icon = Icons.Outlined.Memory, title = stringResource(R.string.settings_compute))
 
             // Threads
             SettingsCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                Text("Потоки CPU", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.settings_cpu_threads), style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Больше потоков = быстрее, но больше нагрев",
+                    stringResource(R.string.settings_cpu_threads_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -129,10 +194,10 @@ fun SettingsScreen(
 
             // Backend
             SettingsCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                Text("Бекенд вычислений", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.settings_compute_backend), style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "GPU/NPU используются только LiteRT Beta; при сбое будет откат на CPU",
+                    stringResource(R.string.settings_compute_backend_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -140,21 +205,21 @@ fun SettingsScreen(
 
                 BackendOption(
                     label = "CPU",
-                    description = "Стабильно на всех устройствах",
+                    description = stringResource(R.string.settings_backend_cpu_desc),
                     selected = backend == SettingsRepository.BACKEND_CPU,
                     enabled = true,
                     onClick = { viewModel.setBackend(SettingsRepository.BACKEND_CPU) }
                 )
                 BackendOption(
                     label = "GPU (Vulkan)",
-                    description = "LiteRT-LM backend с автоматическим откатом",
+                    description = stringResource(R.string.settings_backend_gpu_desc),
                     selected = backend == SettingsRepository.BACKEND_GPU,
                     enabled = true,
                     onClick = { viewModel.setBackend(SettingsRepository.BACKEND_GPU) }
                 )
                 BackendOption(
                     label = "NPU (NNAPI)",
-                    description = "Экспериментально, с откатом на CPU",
+                    description = stringResource(R.string.settings_backend_npu_desc),
                     selected = backend == SettingsRepository.BACKEND_NPU,
                     enabled = true,
                     onClick = { viewModel.setBackend(SettingsRepository.BACKEND_NPU) }
@@ -164,13 +229,13 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             // --- Memory section ---
-            SectionHeader(icon = Icons.Outlined.Timer, title = "Управление памятью")
+            SectionHeader(icon = Icons.Outlined.Timer, title = stringResource(R.string.settings_memory))
 
             SettingsCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                Text("Авто-выгрузка модели", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.settings_auto_unload), style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Через сколько минут простоя выгрузить модель из памяти",
+                    stringResource(R.string.settings_auto_unload_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -178,7 +243,7 @@ fun SettingsScreen(
 
                 val options = SettingsRepository.TIMEOUT_OPTIONS
                 val currentIndex = options.indexOf(timeoutMinutes).coerceAtLeast(0)
-                val currentLabel = if (timeoutMinutes == 0) "Выключено" else "$timeoutMinutes мин"
+                val currentLabel = if (timeoutMinutes == 0) stringResource(R.string.settings_disabled) else stringResource(R.string.minutes_short, timeoutMinutes)
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -205,9 +270,9 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Выкл", style = MaterialTheme.typography.labelSmall,
+                    Text(stringResource(R.string.settings_off), style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("${options.last()} мин", style = MaterialTheme.typography.labelSmall,
+                    Text(stringResource(R.string.minutes_short, options.last()), style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -215,18 +280,24 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // --- Info ---
-            SectionHeader(icon = Icons.Outlined.Info, title = "О приложении")
+            SectionHeader(icon = Icons.Outlined.Info, title = stringResource(R.string.settings_about))
             SettingsCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                InfoRow("Версия", "1.0.0-beta")
-                InfoRow("Модель перевода", "Hy-MT 1.5 1.8B")
+                InfoRow(stringResource(R.string.settings_version), "1.0.0-beta")
+                InfoRow(stringResource(R.string.settings_translation_model), "Hy-MT 1.5 1.8B")
                 InfoRow("TTS", "Sherpa-ONNX Kokoro")
                 InfoRow("STT", "Whisper Tiny + Silero VAD")
-                InfoRow("Движок", "llama.cpp")
+                InfoRow(stringResource(R.string.settings_engine), "llama.cpp")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 @Composable
@@ -265,6 +336,30 @@ private fun SettingsCard(
         Column(
             modifier = Modifier.padding(14.dp),
             content = content
+        )
+    }
+}
+
+@Composable
+private fun AppLanguageOption(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp)
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = onClick
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(start = 4.dp)
         )
     }
 }

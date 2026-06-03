@@ -1,11 +1,14 @@
 package com.translive.app.ui.viewmodel
 
+import android.app.Application
 import android.net.Uri
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.translive.app.R
 import com.translive.app.data.ModelRepository
+import com.translive.app.i18n.LocaleHelper
 import com.translive.app.data.SettingsRepository
 import com.translive.app.data.model.ModelCatalog
 import com.translive.app.data.model.ModelFamily
@@ -74,6 +77,7 @@ data class ModelManagerUiState(
 
 @HiltViewModel
 class ModelManagerViewModel @Inject constructor(
+    private val app: Application,
     private val repo: ModelRepository,
     private val downloadManager: ModelDownloadManager,
     private val engine: TranslationEngine,
@@ -85,6 +89,9 @@ class ModelManagerViewModel @Inject constructor(
     companion object {
         private const val TAG = "ModelManagerVM"
     }
+
+    private fun tr(id: Int, vararg args: Any): String =
+        LocaleHelper.localizedContext(app, settings.appLanguageCode).getString(id, *args)
 
     private val _uiState = MutableStateFlow(ModelManagerUiState())
     val uiState: StateFlow<ModelManagerUiState> = _uiState.asStateFlow()
@@ -192,7 +199,7 @@ class ModelManagerViewModel @Inject constructor(
 
     fun downloadModel(variant: ModelVariant) {
         if (repo.getAvailableSpace() < variant.sizeBytes * 1.1) {
-            _uiState.update { it.copy(error = "Недостаточно места: нужно ${variant.sizeLabel}") }
+            _uiState.update { it.copy(error = tr(R.string.error_insufficient_space, variant.sizeLabel)) }
             return
         }
 
@@ -208,7 +215,7 @@ class ModelManagerViewModel @Inject constructor(
                     }
                 }
                 is DownloadState.Failed -> {
-                    _uiState.update { it.copy(error = "Ошибка: ${state.error}") }
+                    _uiState.update { it.copy(error = tr(R.string.error_prefix, state.error)) }
                 }
                 else -> {}
             }
@@ -239,10 +246,10 @@ class ModelManagerViewModel @Inject constructor(
                 }
 
                 if (!loaded) {
-                    _uiState.update { it.copy(error = "Не удалось загрузить модель ${variant.quantName}") }
+                    _uiState.update { it.copy(error = tr(R.string.error_load_named_model, variant.quantName)) }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Ошибка: ${e.message}") }
+                _uiState.update { it.copy(error = tr(R.string.error_prefix, e.message ?: "")) }
             } finally {
                 _uiState.update { it.copy(isLoadingModel = false) }
                 refreshModels()
@@ -296,7 +303,7 @@ class ModelManagerViewModel @Inject constructor(
                         it.copy(
                             isExporting = false,
                             exportProgress = 1f,
-                            successMessage = "Модель \"${variant.quantName}\" экспортирована"
+                            successMessage = tr(R.string.success_model_exported, variant.quantName)
                         )
                     }
                 },
@@ -304,7 +311,7 @@ class ModelManagerViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isExporting = false,
-                            error = "Экспорт: ${error.message}"
+                            error = tr(R.string.error_export_prefix, error.message ?: "")
                         )
                     }
                 }
@@ -343,7 +350,7 @@ class ModelManagerViewModel @Inject constructor(
                         it.copy(
                             isImporting = false,
                             importProgress = 1f,
-                            successMessage = "Модель \"$filename\" установлена"
+                            successMessage = tr(R.string.success_model_installed, filename)
                         )
                     }
                     refreshModels()
@@ -352,7 +359,7 @@ class ModelManagerViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isImporting = false,
-                            error = error.message ?: "Ошибка импорта"
+                            error = error.message ?: tr(R.string.error_import)
                         )
                     }
                 }

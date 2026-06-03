@@ -4,7 +4,9 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.translive.app.R
 import com.translive.app.data.ModelRepository
+import com.translive.app.i18n.LocaleHelper
 import com.translive.app.data.SettingsRepository
 import com.translive.app.data.db.TranslationDao
 import com.translive.app.data.model.Language
@@ -55,6 +57,9 @@ class TranslationViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(app) {
 
+    private fun tr(id: Int, vararg args: Any): String =
+        LocaleHelper.localizedContext(app, settings.appLanguageCode).getString(id, *args)
+
     private val _uiState = MutableStateFlow(
         TranslationUiState(
             sourceText = savedStateHandle["sourceText"] ?: "",
@@ -95,7 +100,7 @@ class TranslationViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isModelLoading = false,
-                            error = "Модель не выбрана. Откройте вкладку 'Модели' для скачивания."
+                            error = tr(R.string.error_no_model_selected)
                         )
                     }
                     return@launch
@@ -125,7 +130,7 @@ class TranslationViewModel @Inject constructor(
                                 }
                             }
                         } else null,
-                        error = if (!loaded) "Не удалось загрузить модель" else null
+                        error = if (!loaded) tr(R.string.error_load_model_failed) else null
                     )
                 }
 
@@ -134,7 +139,7 @@ class TranslationViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(isModelLoading = false, error = "Ошибка загрузки: ${e.message}")
+                    it.copy(isModelLoading = false, error = tr(R.string.error_load_model_with_message, e.message ?: ""))
                 }
             }
         }
@@ -360,7 +365,7 @@ class TranslationViewModel @Inject constructor(
                     it.copy(
                         isModelLoaded = false,
                         activeModelName = null,
-                        error = "Модель выгружена (простой ${timeoutMinutes} мин.)"
+                        error = tr(R.string.notice_model_unloaded_idle, timeoutMinutes)
                     )
                 }
                 engine.unloadModel()
