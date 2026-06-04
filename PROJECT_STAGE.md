@@ -6,8 +6,8 @@ Snapshot date: 2026-06-05
 
 - Remote: https://github.com/RandoTeam/Parlex.git
 - Branch: `main`
-- Current commit: `1dd676d Bump version to 1.4.0 beta`
-- Current tag: `v1.4.0-beta.1`
+- Release commit: `1dd676d Bump version to 1.4.0 beta`
+- Release tag: `v1.4.0-beta.1`
 - Current GitHub prerelease: https://github.com/RandoTeam/Parlex/releases/tag/v1.4.0-beta.1
 
 ## App Version
