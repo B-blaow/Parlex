@@ -22,10 +22,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.translive.app.R
 import com.translive.app.engine.DownloadState
 import com.translive.app.data.model.ModelFamily
+import com.translive.app.data.model.ModelVariant
 import com.translive.app.data.model.SttModelInfo
 import com.translive.app.ui.components.AppBottomNavigation
 import com.translive.app.ui.components.BottomNavDestination
@@ -117,13 +120,13 @@ fun ModelManagerScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Модели",
+                            text = stringResource(R.string.nav_models),
                             style = MaterialTheme.typography.headlineLarge,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "${uiState.families.size} семейств • ${uiState.families.sumOf { it.variants.size }} квантизаций",
+                            text = stringResource(R.string.models_summary, uiState.families.size, uiState.families.sumOf { it.variants.size }),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -149,7 +152,7 @@ fun ModelManagerScreen(
                             .padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                     Text(
-                        text = "Загрузка модели в память...",
+                        text = stringResource(R.string.model_loading_memory),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp)
@@ -215,7 +218,7 @@ fun ModelManagerScreen(
                             .padding(horizontal = 16.dp)
                     ) {
                         Text(
-                            text = "Импорт модели... ${(uiState.importProgress * 100).toInt()}%",
+                            text = stringResource(R.string.model_import_progress, (uiState.importProgress * 100).toInt()),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -239,7 +242,7 @@ fun ModelManagerScreen(
                     ) {
                         Icon(Icons.Filled.FolderOpen, null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Установить из файла (.gguf/.litertlm)")
+                        Text(stringResource(R.string.model_install_from_file))
                     }
                 }
             }
@@ -248,7 +251,7 @@ fun ModelManagerScreen(
             item(key = "stt_header", contentType = "section_header") {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Распознавание (STT)",
+                    text = stringResource(R.string.models_stt_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
@@ -274,22 +277,24 @@ fun ModelManagerScreen(
         AlertDialog(
             onDismissRequest = { viewModel.dismissLicenseDialog() },
             icon = { Icon(Icons.Outlined.Info, null) },
-            title = { Text("Лицензия ${family?.license?.displayName ?: ""}") },
+            title = { Text(stringResource(R.string.model_license_title, family?.license?.displayName ?: "")) },
             text = {
                 Text(
-                    "Модель ${family?.name ?: variant.quantName} " +
-                    "распространяется на условиях ${family?.license?.displayName ?: ""}. " +
-                    "Скачивая, вы принимаете эти условия. Продолжить?"
+                    stringResource(
+                        R.string.model_license_message,
+                        family?.name ?: variant.quantName,
+                        family?.license?.displayName ?: ""
+                    )
                 )
             },
             confirmButton = {
                 TextButton(onClick = { viewModel.confirmLicenseAndDownload() }) {
-                    Text("Принять и скачать")
+                    Text(stringResource(R.string.model_accept_download))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissLicenseDialog() }) {
-                    Text("Отмена")
+                    Text(stringResource(R.string.notification_cancel))
                 }
             }
         )
@@ -332,7 +337,7 @@ private fun FamilyHeader(
                                 modifier = Modifier.padding(start = 8.dp)
                             ) {
                                 Text(
-                                    text = "Перевод",
+                                    text = stringResource(R.string.model_category_translation),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.tertiary,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -346,7 +351,7 @@ private fun FamilyHeader(
                                 modifier = Modifier.padding(start = 6.dp)
                             ) {
                                 Text(
-                                    text = "✓ Активна",
+                                    text = stringResource(R.string.model_active_checked),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -356,7 +361,7 @@ private fun FamilyHeader(
                     }
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "${family.developer} • ${family.parameterSize} • ${family.languageCount} яз.",
+                        text = stringResource(R.string.model_family_details, family.developer, family.parameterSize, family.languageCount),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -378,14 +383,14 @@ private fun FamilyHeader(
                 }
                 Icon(
                     if (familyState.isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                    contentDescription = if (familyState.isExpanded) "Свернуть" else "Развернуть",
+                    contentDescription = if (familyState.isExpanded) stringResource(R.string.cd_collapse) else stringResource(R.string.cd_expand),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "${family.description} • ${family.license.displayName}",
+                text = "${localizedFamilyDescription(family)} • ${family.license.displayName}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
                 maxLines = 1,
@@ -435,7 +440,7 @@ private fun SttModelCard(
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                     ) {
                         Text(
-                            text = "✓ Готова",
+                            text = stringResource(R.string.model_ready),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -446,7 +451,7 @@ private fun SttModelCard(
 
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = SttModelInfo.COMBINED_DESCRIPTION,
+                text = stringResource(R.string.stt_combined_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -459,7 +464,7 @@ private fun SttModelCard(
                 Icon(Icons.Outlined.FolderZip, null, modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    text = SttModelInfo.COMBINED_SIZE_LABEL,
+                    text = formatSize(SttModelInfo.TOTAL_SIZE_BYTES),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -467,7 +472,7 @@ private fun SttModelCard(
                 Icon(Icons.Outlined.Memory, null, modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    text = "~${SttModelInfo.WHISPER_RAM_MB} МБ RAM",
+                    text = stringResource(R.string.ram_mb, SttModelInfo.WHISPER_RAM_MB),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -501,7 +506,7 @@ private fun SttModelCard(
                     FilledTonalButton(onClick = onDownload) {
                         Icon(Icons.Filled.Download, null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Скачать")
+                        Text(stringResource(R.string.model_download))
                     }
                 }
             }
@@ -520,7 +525,7 @@ private fun SttModelCard(
                     ) {
                         Icon(Icons.Filled.Delete, null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Удалить")
+                        Text(stringResource(R.string.model_delete))
                     }
                 }
             }
@@ -552,11 +557,11 @@ private fun StorageInfoCard(
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Скачано: ${formatSize(totalDownloaded)}",
+                    text = stringResource(R.string.storage_downloaded, formatSize(totalDownloaded)),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = "Свободно: ${formatSize(availableSpace)}",
+                    text = stringResource(R.string.storage_free, formatSize(availableSpace)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -609,7 +614,7 @@ private fun ModelCard(
                         modifier = Modifier.padding(start = 8.dp)
                     ) {
                         Text(
-                            text = "⭐ Рекомендуемая",
+                            text = stringResource(R.string.model_recommended),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -623,7 +628,7 @@ private fun ModelCard(
                         modifier = Modifier.padding(start = 8.dp)
                     ) {
                         Text(
-                            text = "✓ Активна",
+                            text = stringResource(R.string.model_active_checked),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -636,7 +641,7 @@ private fun ModelCard(
 
             // Description
             Text(
-                text = variant.description,
+                text = localizedVariantDescription(variant),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -653,7 +658,7 @@ private fun ModelCard(
                 Icon(Icons.Outlined.FolderZip, null, modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    text = remember(variant.sizeLabel) { variant.sizeLabel },
+                    text = formatSize(variant.sizeBytes),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -661,7 +666,7 @@ private fun ModelCard(
                 Icon(Icons.Outlined.Memory, null, modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    text = "~${variant.ramEstimateMb} МБ RAM",
+                    text = stringResource(R.string.ram_mb, variant.ramEstimateMb),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -695,7 +700,7 @@ private fun ModelCard(
                             )
                             if (dl.speedBytesPerSec > 0) {
                                 Text(
-                                    text = "${formatSize(dl.speedBytesPerSec)}/с",
+                                    text = stringResource(R.string.speed_per_second, formatSize(dl.speedBytesPerSec)),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -717,26 +722,26 @@ private fun ModelCard(
                         FilledTonalButton(onClick = onDownload) {
                             Icon(Icons.Filled.Download, null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Скачать")
+                            Text(stringResource(R.string.model_download))
                         }
                     }
                     ModelStatus.DOWNLOADING -> {
                         OutlinedButton(onClick = onCancel) {
                             Icon(Icons.Filled.Close, null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Отмена")
+                            Text(stringResource(R.string.notification_cancel))
                         }
                     }
                     ModelStatus.DOWNLOADED -> {
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(
-                                Icons.Outlined.Delete, "Delete",
+                                Icons.Outlined.Delete, stringResource(R.string.cd_delete),
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
                         IconButton(onClick = onExport, enabled = !isExporting) {
                             Icon(
-                                Icons.Outlined.Share, "Export",
+                                Icons.Outlined.Share, stringResource(R.string.cd_export),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -744,19 +749,19 @@ private fun ModelCard(
                         Button(onClick = onSelect) {
                             Icon(Icons.Filled.CheckCircle, null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Выбрать")
+                            Text(stringResource(R.string.model_select))
                         }
                     }
                     ModelStatus.ACTIVE -> {
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(
-                                Icons.Outlined.Delete, "Delete",
+                                Icons.Outlined.Delete, stringResource(R.string.cd_delete),
                                 tint = MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
                             )
                         }
                         IconButton(onClick = onExport, enabled = !isExporting) {
                             Icon(
-                                Icons.Outlined.Share, "Export",
+                                Icons.Outlined.Share, stringResource(R.string.cd_export),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -764,13 +769,13 @@ private fun ModelCard(
                         FilledTonalButton(onClick = { }, enabled = false) {
                             Icon(Icons.Filled.Check, null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Активна")
+                            Text(stringResource(R.string.model_active))
                         }
                     }
                     ModelStatus.LOADING -> {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Загрузка...", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.model_loading), style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -781,28 +786,77 @@ private fun ModelCard(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Удалить ${variant.quantName}?") },
-            text = { Text("Файл ${variant.sizeLabel} будет удалён с устройства.") },
+            title = { Text(stringResource(R.string.model_delete_title, variant.quantName)) },
+            text = { Text(stringResource(R.string.model_delete_message, formatSize(variant.sizeBytes))) },
             confirmButton = {
                 TextButton(onClick = {
                     onDelete()
                     showDeleteDialog = false
                 }) {
-                    Text("Удалить", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.model_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Отмена")
+                    Text(stringResource(R.string.notification_cancel))
                 }
             }
         )
     }
 }
 
+@Composable
+private fun localizedFamilyDescription(family: ModelFamily): String {
+    val resourceId = when (family.id) {
+        "hy_mt" -> R.string.model_family_hy_mt_desc
+        "hy_mt2_1_8b" -> R.string.model_family_hy_mt2_1_8b_desc
+        "hy_mt2_7b" -> R.string.model_family_hy_mt2_7b_desc
+        "translate_gemma" -> R.string.model_family_translate_gemma_desc
+        "translate_gemma_litert_beta" -> R.string.model_family_translate_gemma_litert_beta_desc
+        else -> null
+    }
+    return resourceId?.let { stringResource(it) } ?: family.description
+}
+
+@Composable
+private fun localizedVariantDescription(variant: ModelVariant): String {
+    val resourceId = when (variant.id) {
+        "hy_mt:1_25bit" -> R.string.model_variant_hy_mt_1_25bit_desc
+        "hy_mt:2bit" -> R.string.model_variant_hy_mt_2bit_desc
+        "hy_mt:q4_k_m" -> R.string.model_variant_hy_mt_q4_k_m_desc
+        "hy_mt:q6_k" -> R.string.model_variant_hy_mt_q6_k_desc
+        "hy_mt:q8_0" -> R.string.model_variant_hy_mt_q8_0_desc
+        "hy_mt2_1_8b:1_25bit" -> R.string.model_variant_hy_mt2_1_8b_1_25bit_desc
+        "hy_mt2_1_8b:2bit" -> R.string.model_variant_hy_mt2_1_8b_2bit_desc
+        "hy_mt2_1_8b:q4_k_m" -> R.string.model_variant_hy_mt2_1_8b_q4_k_m_desc
+        "hy_mt2_1_8b:q6_k" -> R.string.model_variant_hy_mt2_1_8b_q6_k_desc
+        "hy_mt2_1_8b:q8_0" -> R.string.model_variant_hy_mt2_1_8b_q8_0_desc
+        "hy_mt2_7b:q4_k_m" -> R.string.model_variant_hy_mt2_7b_q4_k_m_desc
+        "hy_mt2_7b:q6_k" -> R.string.model_variant_hy_mt2_7b_q6_k_desc
+        "hy_mt2_7b:q8_0" -> R.string.model_variant_hy_mt2_7b_q8_0_desc
+        "translate_gemma:q2_k" -> R.string.model_variant_translate_gemma_q2_k_desc
+        "translate_gemma:q3_k_s" -> R.string.model_variant_translate_gemma_q3_k_s_desc
+        "translate_gemma:q3_k_m" -> R.string.model_variant_translate_gemma_q3_k_m_desc
+        "translate_gemma:q3_k_l" -> R.string.model_variant_translate_gemma_q3_k_l_desc
+        "translate_gemma:iq4_xs" -> R.string.model_variant_translate_gemma_iq4_xs_desc
+        "translate_gemma:q4_k_s" -> R.string.model_variant_translate_gemma_q4_k_s_desc
+        "translate_gemma:q4_k_m" -> R.string.model_variant_translate_gemma_q4_k_m_desc
+        "translate_gemma:q5_k_s" -> R.string.model_variant_translate_gemma_q5_k_s_desc
+        "translate_gemma:q5_k_m" -> R.string.model_variant_translate_gemma_q5_k_m_desc
+        "translate_gemma:q6_k" -> R.string.model_variant_translate_gemma_q6_k_desc
+        "translate_gemma:q8_0" -> R.string.model_variant_translate_gemma_q8_0_desc
+        "translate_gemma:f16" -> R.string.model_variant_translate_gemma_f16_desc
+        "translate_gemma_litert_beta:int4" -> R.string.model_variant_translate_gemma_litert_beta_int4_desc
+        "translate_gemma_litert_beta:dynamic_int8" -> R.string.model_variant_translate_gemma_litert_beta_dynamic_int8_desc
+        else -> null
+    }
+    return resourceId?.let { stringResource(it) } ?: variant.description
+}
+
+@Composable
 private fun formatSize(bytes: Long): String = when {
-    bytes >= 1_073_741_824L -> "%.1f ГБ".format(bytes / 1_073_741_824.0)
-    bytes >= 1_048_576L -> "%.0f МБ".format(bytes / 1_048_576.0)
-    bytes >= 1024L -> "%.0f КБ".format(bytes / 1024.0)
-    else -> "$bytes Б"
+    bytes >= 1_073_741_824L -> stringResource(R.string.size_gb, bytes / 1_073_741_824.0)
+    bytes >= 1_048_576L -> stringResource(R.string.size_mb, bytes / 1_048_576.0)
+    bytes >= 1024L -> stringResource(R.string.size_kb, bytes / 1024.0)
+    else -> stringResource(R.string.size_bytes, bytes)
 }

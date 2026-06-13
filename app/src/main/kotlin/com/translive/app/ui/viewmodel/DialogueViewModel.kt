@@ -3,6 +3,7 @@ package com.translive.app.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.translive.app.R
 import com.translive.app.data.ModelRepository
 import com.translive.app.data.db.DialogueDao
 import com.translive.app.data.model.DialogueSession
@@ -10,6 +11,7 @@ import com.translive.app.data.model.Language
 import com.translive.app.data.model.ModelRuntime
 import com.translive.app.data.SettingsRepository
 import com.translive.app.engine.*
+import com.translive.app.i18n.LocalizedTextProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -56,8 +58,12 @@ class DialogueViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val systemTts: SystemTtsEngine,
     private val speechEngine: SpeechEngine,
-    private val dialogueDao: DialogueDao
+    private val dialogueDao: DialogueDao,
+    private val texts: LocalizedTextProvider
 ) : AndroidViewModel(app) {
+
+    private fun tr(id: Int, vararg args: Any): String =
+        texts.text(id, *args)
 
     private val _uiState = MutableStateFlow(
         DialogueUiState(
@@ -168,7 +174,7 @@ class DialogueViewModel @Inject constructor(
     fun startConversation() {
         if (_uiState.value.isConversationActive) return
         if (!_uiState.value.hasMicPermission) {
-            _uiState.update { it.copy(error = "Нет доступа к микрофону. Разрешите в настройках.") }
+            _uiState.update { it.copy(error = tr(R.string.error_no_mic_permission)) }
             return
         }
 
@@ -190,7 +196,7 @@ class DialogueViewModel @Inject constructor(
                             it.copy(
                                 isConversationActive = false,
                                 phase = DialoguePhase.ERROR,
-                                error = "Модель перевода не скачана. Скачайте в разделе Модели."
+                                error = tr(R.string.error_translation_model_missing)
                             )
                         }
                         return@launch
@@ -201,7 +207,7 @@ class DialogueViewModel @Inject constructor(
                             it.copy(
                                 isConversationActive = false,
                                 phase = DialoguePhase.ERROR,
-                                error = "Не удалось загрузить модель перевода."
+                                error = tr(R.string.error_translation_model_load_failed)
                             )
                         }
                         return@launch
@@ -215,7 +221,7 @@ class DialogueViewModel @Inject constructor(
                         it.copy(
                             isConversationActive = false,
                             phase = DialoguePhase.ERROR,
-                            error = "STT модели не загружены или повреждены. Переустановите в разделе Модели."
+                            error = tr(R.string.error_stt_missing_or_corrupt)
                         )
                     }
                     return@launch
@@ -226,7 +232,7 @@ class DialogueViewModel @Inject constructor(
                         it.copy(
                             isConversationActive = false,
                             phase = DialoguePhase.ERROR,
-                            error = "Не удалось инициализировать STT. Модели повреждены — переустановите."
+                            error = tr(R.string.error_stt_init_failed)
                         )
                     }
                     return@launch
@@ -250,7 +256,7 @@ class DialogueViewModel @Inject constructor(
                     it.copy(
                         isConversationActive = false,
                         phase = DialoguePhase.ERROR,
-                        error = "Ошибка запуска: ${e.message}"
+                        error = tr(R.string.error_start_with_message, e.message ?: "")
                     )
                 }
             }

@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.translive.app.R
 import com.translive.app.data.model.DialogueMessage
 import com.translive.app.data.model.DialogueSession
 import com.translive.app.data.model.TranslationEntry
@@ -79,7 +81,7 @@ fun HistoryScreen(
                     .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
                 Text(
-                    text = "История",
+                    text = stringResource(R.string.nav_history),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
@@ -95,19 +97,19 @@ fun HistoryScreen(
                 Tab(
                     selected = uiState.tab == HistoryTab.ALL,
                     onClick = { viewModel.setTab(HistoryTab.ALL) },
-                    text = { Text("Все") },
+                    text = { Text(stringResource(R.string.history_tab_all)) },
                     icon = { Icon(Icons.Outlined.List, null, modifier = Modifier.size(18.dp)) }
                 )
                 Tab(
                     selected = uiState.tab == HistoryTab.FAVORITES,
                     onClick = { viewModel.setTab(HistoryTab.FAVORITES) },
-                    text = { Text("Избранное") },
+                    text = { Text(stringResource(R.string.history_tab_favorites)) },
                     icon = { Icon(Icons.Outlined.Star, null, modifier = Modifier.size(18.dp)) }
                 )
                 Tab(
                     selected = uiState.tab == HistoryTab.VOICE,
                     onClick = { viewModel.setTab(HistoryTab.VOICE) },
-                    text = { Text("Голос") },
+                    text = { Text(stringResource(R.string.history_tab_voice)) },
                     icon = { Icon(Icons.Outlined.RecordVoiceOver, null, modifier = Modifier.size(18.dp)) }
                 )
             }
@@ -120,12 +122,12 @@ fun HistoryScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Поиск по тексту...") },
+                    placeholder = { Text(stringResource(R.string.history_search_placeholder)) },
                     leadingIcon = { Icon(Icons.Filled.Search, null) },
                     trailingIcon = {
                         if (uiState.searchQuery.isNotEmpty()) {
                             IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                                Icon(Icons.Filled.Close, "Очистить")
+                                Icon(Icons.Filled.Close, stringResource(R.string.cd_clear))
                             }
                         }
                     },
@@ -145,7 +147,7 @@ fun HistoryScreen(
                     FilterChip(
                         selected = uiState.languageFilter == null,
                         onClick = { viewModel.setLanguageFilter(null) },
-                        label = { Text("Все") }
+                        label = { Text(stringResource(R.string.history_tab_all)) }
                     )
                     FilterChip(
                         selected = uiState.languageFilter == "ru-en",
@@ -170,8 +172,8 @@ fun HistoryScreen(
                 HistoryTab.ALL, HistoryTab.FAVORITES -> {
                     if (uiState.translations.isEmpty()) {
                         EmptyState(
-                            if (uiState.tab == HistoryTab.ALL) "Нет переводов"
-                            else "Нет избранных",
+                            if (uiState.tab == HistoryTab.ALL) stringResource(R.string.history_no_translations)
+                            else stringResource(R.string.history_no_favorites),
                             modifier = Modifier.weight(1f)
                         )
                     } else {
@@ -209,17 +211,17 @@ fun HistoryScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             IconButton(onClick = { viewModel.selectSession(null) }) {
-                                Icon(Icons.Filled.ArrowBack, "Назад")
+                                Icon(Icons.Filled.ArrowBack, stringResource(R.string.cd_back))
                             }
                             Text(
-                                "Сообщения сессии",
+                                stringResource(R.string.history_session_messages),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Medium
                             )
                         }
 
                         if (uiState.selectedSessionMessages.isEmpty()) {
-                            EmptyState("Нет сообщений", modifier = Modifier.weight(1f))
+                            EmptyState(stringResource(R.string.history_no_messages), modifier = Modifier.weight(1f))
                         } else {
                             LazyColumn(
                                 modifier = Modifier.weight(1f),
@@ -245,7 +247,7 @@ fun HistoryScreen(
                     } else {
                         // Sessions list
                         if (uiState.voiceSessions.isEmpty()) {
-                            EmptyState("Нет голосовых сессий", modifier = Modifier.weight(1f))
+                            EmptyState(stringResource(R.string.history_no_voice_sessions), modifier = Modifier.weight(1f))
                         } else {
                             LazyColumn(
                                 modifier = Modifier.weight(1f),
@@ -273,7 +275,7 @@ fun HistoryScreen(
             // Favorites from voice (shown below sessions on FAVORITES tab)
             if (uiState.tab == HistoryTab.FAVORITES && uiState.favoriteVoiceMessages.isNotEmpty()) {
                 Text(
-                    text = "🎤 Избранные голосовые",
+                    text = stringResource(R.string.history_favorite_voice),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
@@ -402,7 +404,7 @@ private fun TranslationHistoryCard(
                     IconButton(onClick = onToggleFavorite, modifier = Modifier.size(32.dp)) {
                         Icon(
                             if (entry.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                            "Избранное",
+                            stringResource(R.string.history_tab_favorites),
                             tint = if (entry.isFavorite) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
@@ -410,14 +412,14 @@ private fun TranslationHistoryCard(
                     }
                     IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
                         Icon(
-                            Icons.Outlined.ContentCopy, "Копировать",
+                            Icons.Outlined.ContentCopy, stringResource(R.string.cd_copy),
                             modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
                         Icon(
-                            Icons.Outlined.Delete, "Удалить",
+                            Icons.Outlined.Delete, stringResource(R.string.cd_delete),
                             modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.error
                         )
@@ -458,7 +460,7 @@ private fun SessionCard(
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = session.title.ifEmpty { "Голосовая сессия" },
+                    text = session.title.ifEmpty { stringResource(R.string.history_voice_session) },
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium
                 )
@@ -476,7 +478,7 @@ private fun SessionCard(
             )
             IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
                 Icon(
-                    Icons.Outlined.Delete, "Удалить",
+                    Icons.Outlined.Delete, stringResource(R.string.cd_delete),
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.error
                 )
@@ -543,7 +545,7 @@ private fun VoiceMessageCard(
                 IconButton(onClick = onToggleFavorite, modifier = Modifier.size(28.dp)) {
                     Icon(
                         if (message.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                        "Избранное",
+                        stringResource(R.string.history_tab_favorites),
                         modifier = Modifier.size(16.dp),
                         tint = if (message.isFavorite) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant
@@ -551,7 +553,7 @@ private fun VoiceMessageCard(
                 }
                 IconButton(onClick = onCopy, modifier = Modifier.size(28.dp)) {
                     Icon(
-                        Icons.Outlined.ContentCopy, "Копировать",
+                        Icons.Outlined.ContentCopy, stringResource(R.string.cd_copy),
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )

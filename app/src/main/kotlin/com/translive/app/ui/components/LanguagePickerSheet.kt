@@ -12,7 +12,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.translive.app.R
 import com.translive.app.data.model.Language
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,7 +61,7 @@ fun LanguagePickerSheet(
     ) {
         Column(modifier = Modifier.fillMaxHeight(0.85f)) {
             Text(
-                text = "Выберите язык",
+                text = stringResource(R.string.language_picker_title),
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
             )
@@ -68,8 +70,8 @@ fun LanguagePickerSheet(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Поиск языка...") },
-                leadingIcon = { Icon(Icons.Filled.Search, "Search") },
+                placeholder = { Text(stringResource(R.string.language_picker_search)) },
+                leadingIcon = { Icon(Icons.Filled.Search, stringResource(R.string.language_picker_search_cd)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -96,7 +98,7 @@ fun LanguagePickerSheet(
                 if (searchQuery.isBlank()) {
                     item {
                         Text(
-                            text = "Популярные",
+                            text = stringResource(R.string.language_picker_popular),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
@@ -112,7 +114,7 @@ fun LanguagePickerSheet(
                     item {
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         Text(
-                            text = "Все языки",
+                            text = stringResource(R.string.language_picker_all),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
@@ -159,7 +161,7 @@ private fun AutoLanguageItem(
             if (isSelected) {
                 Icon(
                     Icons.Filled.Check,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.language_picker_selected),
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
@@ -191,7 +193,7 @@ private fun LanguageItem(
         supportingContent = {
             Text(
                 text = language.nativeName +
-                        if (language.isDialect) " • диалект" else "",
+                        if (language.isDialect) stringResource(R.string.language_picker_dialect_suffix) else "",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -200,7 +202,7 @@ private fun LanguageItem(
             if (isSelected) {
                 Icon(
                     Icons.Filled.Check,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.language_picker_selected),
                     tint = MaterialTheme.colorScheme.primary
                 )
             }

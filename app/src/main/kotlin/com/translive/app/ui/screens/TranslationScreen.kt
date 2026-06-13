@@ -19,10 +19,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.translive.app.R
 import com.translive.app.data.model.Language
 import com.translive.app.ui.components.AppBottomNavigation
 import com.translive.app.ui.components.BottomNavDestination
@@ -53,9 +55,9 @@ fun TranslationScreen(
     val sourceChipLabel = if (uiState.isSourceAuto) {
         val detected = uiState.detectedSourceLanguage
         when {
-            uiState.isDetectingSourceLanguage -> "Auto..."
-            detected != null -> "Auto: ${detected.flag} ${detected.nativeName}"
-            else -> "Auto"
+            uiState.isDetectingSourceLanguage -> stringResource(R.string.auto_detecting)
+            detected != null -> stringResource(R.string.auto_detected, detected.flag, detected.nativeName)
+            else -> stringResource(R.string.auto_language)
         }
     } else {
         "${uiState.sourceLanguage.flag} ${uiState.sourceLanguage.nativeName}"
@@ -131,7 +133,7 @@ fun TranslationScreen(
                     OutlinedTextField(
                         value = uiState.sourceText,
                         onValueChange = { viewModel.setSourceText(it) },
-                        placeholder = { Text("Введите текст для перевода...") },
+                        placeholder = { Text(stringResource(R.string.translation_input_placeholder)) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 120.dp),
@@ -151,12 +153,12 @@ fun TranslationScreen(
                         IconButton(onClick = {
                             viewModel.setSourceText("")
                         }) {
-                            Icon(Icons.Filled.Clear, "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Icon(Icons.Filled.Clear, stringResource(R.string.cd_clear), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         IconButton(onClick = {
                             // Voice input — navigate to Dialogue screen
                         }) {
-                            Icon(Icons.Filled.Mic, "Voice input", tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Filled.Mic, stringResource(R.string.cd_voice_input), tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -184,11 +186,11 @@ fun TranslationScreen(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Перевод...")
+                    Text(stringResource(R.string.translation_in_progress))
                 } else {
-                    Icon(Icons.Filled.Translate, "Translate")
+                    Icon(Icons.Filled.Translate, stringResource(R.string.translate_action))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Перевести")
+                    Text(stringResource(R.string.translate_action))
                 }
             }
 
@@ -201,7 +203,7 @@ fun TranslationScreen(
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = "Загрузка модели перевода...",
+                    text = stringResource(R.string.translation_model_loading),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth(),
@@ -291,7 +293,7 @@ fun TranslationScreen(
                                 clipboardManager.setText(AnnotatedString(uiState.translatedText))
                             }) {
                                 Icon(
-                                    Icons.Outlined.ContentCopy, "Copy",
+                                    Icons.Outlined.ContentCopy, stringResource(R.string.cd_copy),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
@@ -308,7 +310,7 @@ fun TranslationScreen(
                                 Icon(
                                     if (isSpeaking) Icons.Filled.StopCircle
                                     else Icons.Filled.VolumeUp,
-                                    "Speak",
+                                    stringResource(R.string.cd_speak),
                                     tint = if (isSpeaking)
                                         MaterialTheme.colorScheme.error
                                     else MaterialTheme.colorScheme.primary
@@ -328,8 +330,8 @@ fun TranslationScreen(
         LanguagePickerSheet(
             selectedLanguage = uiState.sourceLanguage,
             excludeLanguage = uiState.targetLanguage,
-            autoOptionLabel = "Auto",
-            autoOptionDescription = "Определять язык по введенному тексту",
+            autoOptionLabel = stringResource(R.string.auto_language),
+            autoOptionDescription = stringResource(R.string.auto_language_desc),
             isAutoSelected = uiState.isSourceAuto,
             onAutoSelected = {
                 viewModel.setSourceAuto()
@@ -390,7 +392,7 @@ private fun LanguageSelectorRow(
         ) {
             Icon(
                 Icons.Filled.SwapHoriz,
-                contentDescription = "Swap languages",
+                contentDescription = stringResource(R.string.cd_swap_languages),
                 tint = if (swapEnabled) {
                     MaterialTheme.colorScheme.primary
                 } else {

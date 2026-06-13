@@ -1,6 +1,7 @@
 package com.translive.app.data
 
 import android.content.Context
+import com.translive.app.i18n.AppLocale
 import com.translive.app.data.model.Language
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -27,6 +28,7 @@ class SettingsRepository @Inject constructor(
         private const val KEY_CAMERA_TARGET_LANGUAGE = "camera_target_language"
         private const val KEY_DIALOGUE_SOURCE_LANGUAGE = "dialogue_source_language"
         private const val KEY_DIALOGUE_TARGET_LANGUAGE = "dialogue_target_language"
+        private const val KEY_APP_LANGUAGE = "app_language"
 
         const val BACKEND_CPU = "cpu"
         const val BACKEND_GPU = "gpu"
@@ -35,6 +37,10 @@ class SettingsRepository @Inject constructor(
         val THREAD_OPTIONS = listOf(1, 2, 3, 4, 6, 8)
         val TIMEOUT_OPTIONS = listOf(0, 1, 2, 5, 10, 30) // 0 = never unload
     }
+
+    var appLanguageCode: String
+        get() = prefs.getString(KEY_APP_LANGUAGE, AppLocale.SYSTEM) ?: AppLocale.SYSTEM
+        set(value) = prefs.edit().putString(KEY_APP_LANGUAGE, AppLocale.normalize(value)).apply()
 
     var threads: Int
         get() = prefs.getInt(KEY_THREADS, 4)

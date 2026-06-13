@@ -59,6 +59,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,6 +70,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.translive.app.R
 import com.translive.app.ui.components.AppBottomNavigation
 import com.translive.app.ui.components.BottomNavDestination
 import com.translive.app.ui.components.LanguagePickerSheet
@@ -430,16 +432,16 @@ fun CameraScreen(
                 ) {
                     Icon(Icons.Filled.CameraAlt, null, Modifier.size(64.dp), tint = Color.White.copy(0.5f))
                     Spacer(Modifier.height(16.dp))
-                    Text("Доступ к камере не разрешён", color = Color.White)
+                    Text(stringResource(R.string.camera_permission_denied), color = Color.White)
                     Spacer(Modifier.height(8.dp))
                     Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
-                        Text("Разрешить")
+                        Text(stringResource(R.string.camera_allow))
                     }
                     Spacer(Modifier.height(10.dp))
                     OutlinedButton(onClick = openGallery) {
                         Icon(Icons.Filled.PhotoLibrary, null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Выбрать фото")
+                        Text(stringResource(R.string.camera_pick_photo))
                     }
                 }
             } else {
@@ -503,7 +505,7 @@ fun CameraScreen(
                                         color = Color.White
                                     )
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Загрузка модели перевода…", color = Color.White,
+                                    Text(stringResource(R.string.camera_model_loading), color = Color.White,
                                         style = MaterialTheme.typography.labelSmall)
                                 }
                             }
@@ -569,7 +571,7 @@ fun CameraScreen(
                             IconButton(
                                 onClick = {
                                     captureRequest?.invoke()
-                                        ?: viewModel.failFullResolutionCapture("Камера еще не готова")
+                                        ?: viewModel.failCameraNotReady()
                                 },
                                 enabled = !uiState.isCaptureProcessing,
                                 modifier = Modifier
@@ -585,7 +587,7 @@ fun CameraScreen(
                             FilledTonalButton(onClick = { viewModel.backToLive() }) {
                                 Icon(Icons.Filled.CameraAlt, null)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Камера")
+                                Text(stringResource(R.string.camera_mode_camera))
                             }
                             Spacer(Modifier.width(8.dp))
                             FilledTonalButton(
@@ -594,7 +596,7 @@ fun CameraScreen(
                             ) {
                                 Icon(Icons.Filled.PhotoLibrary, null)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Фото")
+                                Text(stringResource(R.string.camera_mode_photo))
                             }
                         }
                     }
@@ -651,7 +653,7 @@ fun CameraScreen(
             selectedLanguage = uiState.sourceLanguage,
             excludeLanguage = uiState.targetLanguage,
             autoOptionLabel = "Auto",
-            autoOptionDescription = "Определять язык по кадру",
+            autoOptionDescription = stringResource(R.string.camera_auto_desc),
             isAutoSelected = uiState.isSourceAuto,
             onAutoSelected = { viewModel.setSourceAuto(); showSourcePicker = false },
             onLanguageSelected = { viewModel.setSourceLanguage(it); showSourcePicker = false },
@@ -701,7 +703,7 @@ private fun GalleryPhotoButton(
     ) {
         Icon(
             imageVector = Icons.Filled.PhotoLibrary,
-            contentDescription = "Выбрать фото из галереи",
+            contentDescription = stringResource(R.string.cd_pick_photo),
             tint = if (enabled) Color.White else Color.White.copy(alpha = 0.38f)
         )
     }
@@ -763,7 +765,7 @@ private fun BoxScope.CameraHardwareControls(
             ) {
                 Icon(
                     imageVector = if (torchEnabled) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
-                    contentDescription = if (torchEnabled) "Выключить фонарь" else "Включить фонарь",
+                    contentDescription = if (torchEnabled) stringResource(R.string.cd_torch_off) else stringResource(R.string.cd_torch_on),
                     tint = if (torchEnabled && hasFlash) Color(0xFFFFD54F) else Color.White
                 )
             }
@@ -858,13 +860,14 @@ private fun BoxScope.CameraQualityBadge(
     }
 }
 
+@Composable
 private fun CameraQualityWarning.qualityLabel(): String =
     when (this) {
-        CameraQualityWarning.LOW_LIGHT -> "Мало света"
-        CameraQualityWarning.SOFT_FOCUS -> "Наведите фокус"
-        CameraQualityWarning.SMALL_TEXT -> "Подойдите ближе"
-        CameraQualityWarning.SCRIPT_MISMATCH -> "Проверьте язык"
-        CameraQualityWarning.TRANSLATION_MODEL_UNAVAILABLE -> "Модель не готова"
+        CameraQualityWarning.LOW_LIGHT -> stringResource(R.string.camera_warning_low_light)
+        CameraQualityWarning.SOFT_FOCUS -> stringResource(R.string.camera_warning_soft_focus)
+        CameraQualityWarning.SMALL_TEXT -> stringResource(R.string.camera_warning_small_text)
+        CameraQualityWarning.SCRIPT_MISMATCH -> stringResource(R.string.camera_warning_script_mismatch)
+        CameraQualityWarning.TRANSLATION_MODEL_UNAVAILABLE -> stringResource(R.string.camera_warning_model_unavailable)
     }
 
 @Composable
@@ -1101,7 +1104,7 @@ private fun LiveCameraView(
         val capture: () -> Unit = {
             val imageCapture = imageCaptureRef.get()
             if (imageCapture == null) {
-                viewModel.failFullResolutionCapture("Камера еще не готова")
+                viewModel.failCameraNotReady()
             } else if (isTakingPicture.compareAndSet(false, true)) {
                 viewModel.startFullResolutionCapture()
                 imageCapture.takePicture(
@@ -1119,7 +1122,7 @@ private fun LiveCameraView(
                                 "ImageCapture failed: ${exception.message}",
                                 exception
                             )
-                            viewModel.failFullResolutionCapture("Не удалось снять кадр")
+                            viewModel.failFullResolutionCapture()
                         }
                     }
                 )

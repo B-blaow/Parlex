@@ -12,7 +12,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.translive.app.R
 
 enum class BottomNavDestination {
     TRANSLATE,
@@ -40,32 +42,32 @@ fun AppBottomNavigation(
         NavigationBarItem(
             selected = selected == BottomNavDestination.TRANSLATE,
             onClick = onNavigateToTranslate,
-            icon = { Icon(Icons.Filled.Translate, "Translate") }
+            icon = { Icon(Icons.Filled.Translate, stringResource(R.string.nav_translate)) }
         )
         NavigationBarItem(
             selected = selected == BottomNavDestination.DIALOGUE,
             onClick = onNavigateToDialogue,
-            icon = { Icon(Icons.Filled.Mic, "Dialogue") }
+            icon = { Icon(Icons.Filled.Mic, stringResource(R.string.nav_dialogue)) }
         )
         NavigationBarItem(
             selected = selected == BottomNavDestination.CAMERA,
             onClick = onNavigateToCamera,
-            icon = { Icon(Icons.Filled.CameraAlt, "Camera") }
+            icon = { Icon(Icons.Filled.CameraAlt, stringResource(R.string.nav_camera)) }
         )
         NavigationBarItem(
             selected = selected == BottomNavDestination.HISTORY,
             onClick = onNavigateToHistory,
-            icon = { Icon(Icons.Filled.History, "History") }
+            icon = { Icon(Icons.Filled.History, stringResource(R.string.nav_history)) }
         )
         NavigationBarItem(
             selected = selected == BottomNavDestination.MODELS,
             onClick = onNavigateToModels,
-            icon = { Icon(Icons.Filled.Storage, "Models") }
+            icon = { Icon(Icons.Filled.Storage, stringResource(R.string.nav_models)) }
         )
         NavigationBarItem(
             selected = selected == BottomNavDestination.SETTINGS,
             onClick = onNavigateToSettings,
-            icon = { Icon(Icons.Filled.Settings, "Settings") }
+            icon = { Icon(Icons.Filled.Settings, stringResource(R.string.nav_settings)) }
         )
     }
 }

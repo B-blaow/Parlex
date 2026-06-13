@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.translive.app.R
 import com.translive.app.data.ModelRepository
 import com.translive.app.data.SettingsRepository
 import com.translive.app.data.model.ModelCatalog
@@ -17,6 +18,7 @@ import com.translive.app.engine.LiteRtTranslationEngine
 import com.translive.app.engine.ModelDownloadManager
 import com.translive.app.engine.SpeechEngine
 import com.translive.app.engine.TranslationEngine
+import com.translive.app.i18n.LocalizedTextProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -79,11 +81,22 @@ class ModelManagerViewModel @Inject constructor(
     private val engine: TranslationEngine,
     private val liteRtEngine: LiteRtTranslationEngine,
     private val speechEngine: SpeechEngine,
-    private val settings: SettingsRepository
+    private val settings: SettingsRepository,
+    private val texts: LocalizedTextProvider
 ) : ViewModel() {
 
     companion object {
         private const val TAG = "ModelManagerVM"
+    }
+
+    private fun tr(id: Int, vararg args: Any): String =
+        texts.text(id, *args)
+
+    private fun formatSize(bytes: Long): String = when {
+        bytes >= 1_073_741_824L -> tr(R.string.size_gb, bytes / 1_073_741_824.0)
+        bytes >= 1_048_576L -> tr(R.string.size_mb, bytes / 1_048_576.0)
+        bytes >= 1024L -> tr(R.string.size_kb, bytes / 1024.0)
+        else -> tr(R.string.size_bytes, bytes)
     }
 
     private val _uiState = MutableStateFlow(ModelManagerUiState())
@@ -192,7 +205,7 @@ class ModelManagerViewModel @Inject constructor(
 
     fun downloadModel(variant: ModelVariant) {
         if (repo.getAvailableSpace() < variant.sizeBytes * 1.1) {
-            _uiState.update { it.copy(error = "Недостаточно места: нужно ${variant.sizeLabel}") }
+            _uiState.update { it.copy(error = tr(R.string.error_insufficient_space, formatSize(variant.sizeBytes))) }
             return
         }
 
@@ -208,7 +221,7 @@ class ModelManagerViewModel @Inject constructor(
                     }
                 }
                 is DownloadState.Failed -> {
-                    _uiState.update { it.copy(error = "Ошибка: ${state.error}") }
+                    _uiState.update { it.copy(error = tr(R.string.error_prefix, state.error)) }
                 }
                 else -> {}
             }
@@ -239,10 +252,10 @@ class ModelManagerViewModel @Inject constructor(
                 }
 
                 if (!loaded) {
-                    _uiState.update { it.copy(error = "Не удалось загрузить модель ${variant.quantName}") }
+                    _uiState.update { it.copy(error = tr(R.string.error_load_named_model, variant.quantName)) }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Ошибка: ${e.message}") }
+                _uiState.update { it.copy(error = tr(R.string.error_prefix, e.message ?: "")) }
             } finally {
                 _uiState.update { it.copy(isLoadingModel = false) }
                 refreshModels()
@@ -296,7 +309,7 @@ class ModelManagerViewModel @Inject constructor(
                         it.copy(
                             isExporting = false,
                             exportProgress = 1f,
-                            successMessage = "Модель \"${variant.quantName}\" экспортирована"
+                            successMessage = tr(R.string.success_model_exported, variant.quantName)
                         )
                     }
                 },
@@ -304,7 +317,7 @@ class ModelManagerViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isExporting = false,
-                            error = "Экспорт: ${error.message}"
+                            error = tr(R.string.error_export_prefix, error.message ?: "")
                         )
                     }
                 }
@@ -343,7 +356,7 @@ class ModelManagerViewModel @Inject constructor(
                         it.copy(
                             isImporting = false,
                             importProgress = 1f,
-                            successMessage = "Модель \"$filename\" установлена"
+                            successMessage = tr(R.string.success_model_installed, filename)
                         )
                     }
                     refreshModels()
@@ -352,7 +365,7 @@ class ModelManagerViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isImporting = false,
-                            error = error.message ?: "Ошибка импорта"
+                            error = error.message ?: tr(R.string.error_import)
                         )
                     }
                 }
@@ -384,12 +397,12 @@ class ModelManagerViewModel @Inject constructor(
         downloadManager.startDownload(vadVariant, speechEngine.vadFile) { vadState ->
             when (vadState) {
                 is DownloadState.Completed -> {
-                    // VAD done — now download Whisper
+                    // VAD done, now download Whisper.
                     downloadWhisper(sttDir)
                 }
                 is DownloadState.Failed -> {
                     _uiState.update {
-                        it.copy(sttDownloading = false, error = "VAD: ${vadState.error}")
+                        it.copy(sttDownloading = false, error = tr(R.string.error_prefix, "VAD: ${vadState.error}"))
                     }
                 }
                 is DownloadState.Cancelled -> {
@@ -406,7 +419,7 @@ class ModelManagerViewModel @Inject constructor(
             id = "stt-whisper",
             quantName = SttModelInfo.WHISPER_DISPLAY_NAME,
             displayName = SttModelInfo.WHISPER_DISPLAY_NAME,
-            description = SttModelInfo.WHISPER_DESCRIPTION,
+            description = SttModelInfo.WHISPER_DISPLAY_NAME,
             sizeBytes = SttModelInfo.WHISPER_SIZE_BYTES,
             ramEstimateMb = SttModelInfo.WHISPER_RAM_MB,
             downloadUrl = "${SttModelInfo.WHISPER_BASE_URL}/${SttModelInfo.WHISPER_ARCHIVE}",
@@ -428,13 +441,13 @@ class ModelManagerViewModel @Inject constructor(
                     } catch (e: Exception) {
                         Log.e(TAG, "STT extract error: ${e.message}", e)
                         _uiState.update {
-                            it.copy(sttDownloading = false, error = "STT extract: ${e.message}")
+                            it.copy(sttDownloading = false, error = tr(R.string.error_prefix, "STT extract: ${e.message ?: ""}"))
                         }
                     }
                 }
                 is DownloadState.Failed -> {
                     _uiState.update {
-                        it.copy(sttDownloading = false, error = "Whisper: ${state.error}")
+                        it.copy(sttDownloading = false, error = tr(R.string.error_prefix, "Whisper: ${state.error}"))
                     }
                 }
                 is DownloadState.Cancelled -> {

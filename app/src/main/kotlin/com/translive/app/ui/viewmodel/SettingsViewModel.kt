@@ -13,6 +13,9 @@ class SettingsViewModel @Inject constructor(
     private val settings: SettingsRepository
 ) : ViewModel() {
 
+    private val _appLanguage = MutableStateFlow(settings.appLanguageCode)
+    val appLanguage: StateFlow<String> = _appLanguage.asStateFlow()
+
     private val _threads = MutableStateFlow(settings.threads)
     val threads: StateFlow<Int> = _threads.asStateFlow()
 
@@ -21,6 +24,11 @@ class SettingsViewModel @Inject constructor(
 
     private val _backend = MutableStateFlow(settings.backend)
     val backend: StateFlow<String> = _backend.asStateFlow()
+
+    fun setAppLanguage(value: String) {
+        settings.appLanguageCode = value
+        _appLanguage.value = value
+    }
 
     fun setThreads(value: Int) {
         settings.threads = value

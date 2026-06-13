@@ -25,9 +25,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.translive.app.R
 import com.translive.app.data.model.Language
 import com.translive.app.ui.components.AppBottomNavigation
 import com.translive.app.ui.components.BottomNavDestination
@@ -200,11 +202,11 @@ fun DialogueScreen(
 private fun DialogueHeader(phase: DialoguePhase) {
     val phaseText = when (phase) {
         DialoguePhase.IDLE -> ""
-        DialoguePhase.LISTENING -> "Слушаю..."
-        DialoguePhase.RECOGNIZING -> "Распознаю..."
-        DialoguePhase.TRANSLATING -> "Перевожу..."
-        DialoguePhase.SPEAKING -> "Говорю..."
-        DialoguePhase.ERROR -> "Ошибка"
+        DialoguePhase.LISTENING -> stringResource(R.string.dialogue_phase_listening)
+        DialoguePhase.RECOGNIZING -> stringResource(R.string.dialogue_phase_recognizing)
+        DialoguePhase.TRANSLATING -> stringResource(R.string.dialogue_phase_translating)
+        DialoguePhase.SPEAKING -> stringResource(R.string.dialogue_phase_speaking)
+        DialoguePhase.ERROR -> stringResource(R.string.dialogue_phase_error)
     }
 
     val phaseColor = when (phase) {
@@ -232,7 +234,7 @@ private fun DialogueHeader(phase: DialoguePhase) {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = "Диалог",
+                text = stringResource(R.string.nav_dialogue),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary
@@ -286,23 +288,23 @@ private fun SetupPrompt(
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Настройка голоса",
+                text = stringResource(R.string.dialogue_voice_setup),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(12.dp))
 
             // Checklist
-            SetupCheckRow("Модель перевода", hasTranslation)
-            SetupCheckRow("Распознавание речи (STT)", hasStt)
-            SetupCheckRow("Озвучивание (TTS)", hasTts)
+            SetupCheckRow(stringResource(R.string.dialogue_setup_translation_model), hasTranslation)
+            SetupCheckRow(stringResource(R.string.dialogue_setup_stt), hasStt)
+            SetupCheckRow(stringResource(R.string.dialogue_setup_tts), hasTts)
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(onClick = onNavigateToModels) {
                 Icon(Icons.Filled.Download, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Скачать модели")
+                Text(stringResource(R.string.dialogue_download_models))
             }
         }
     }
@@ -347,7 +349,7 @@ private fun EmptyStateHint(modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Нажмите «Начать» и говорите",
+                text = stringResource(R.string.dialogue_empty_hint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -389,7 +391,7 @@ private fun DialogueLanguageSelector(
         ) {
             Icon(
                 Icons.Filled.SwapHoriz,
-                contentDescription = "Swap languages",
+                contentDescription = stringResource(R.string.cd_swap_languages),
                 tint = if (enabled) MaterialTheme.colorScheme.primary
                        else MaterialTheme.colorScheme.outline
             )
@@ -441,7 +443,7 @@ private fun ConversationButton(
         ) {
             Icon(
                 if (isActive) Icons.Filled.Stop else Icons.Filled.Mic,
-                contentDescription = if (isActive) "Остановить" else "Начать",
+                contentDescription = if (isActive) stringResource(R.string.dialogue_stop) else stringResource(R.string.dialogue_start),
                 modifier = Modifier.size(36.dp)
             )
         }
@@ -449,7 +451,7 @@ private fun ConversationButton(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = if (isActive) "Остановить" else "Начать разговор",
+            text = if (isActive) stringResource(R.string.dialogue_stop) else stringResource(R.string.dialogue_start_conversation),
             style = MaterialTheme.typography.labelLarge,
             color = buttonColor,
             fontWeight = FontWeight.Medium
@@ -480,7 +482,7 @@ private fun DialogueBubble(
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
-                        Icons.Filled.VolumeUp, "Озвучить",
+                        Icons.Filled.VolumeUp, stringResource(R.string.cd_speak),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
                     )
@@ -536,7 +538,7 @@ private fun DialogueBubble(
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
-                        Icons.Filled.VolumeUp, "Озвучить",
+                        Icons.Filled.VolumeUp, stringResource(R.string.cd_speak),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
