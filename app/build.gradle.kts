@@ -125,7 +125,7 @@ dependencies {
     // OkHttp for model downloads
     implementation("com.squareup.okhttp3:okhttp:5.3.2")
 
-    // Sherpa-ONNX for Kokoro TTS
+    // Sherpa-ONNX for offline STT (Whisper Tiny + Silero VAD)
     implementation(files("libs/sherpa-onnx-1.13.1.aar"))
 
     // Apache Commons Compress for tar.bz2 extraction

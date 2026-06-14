@@ -194,5 +194,6 @@
     <string name="model_variant_translate_gemma_f16_desc">FP16</string>
     <string name="model_variant_translate_gemma_litert_beta_int4_desc">LiteRT-LM INT4，约 2 GB，用于 CPU/GPU/NPU 测试</string>
     <string name="model_variant_translate_gemma_litert_beta_dynamic_int8_desc">LiteRT-LM dynamic INT8，约 4 GB，质量更高</string>
+    <string name="settings_tts_engine_value">Android System TTS</string>
     <string name="stt_combined_description">Silero VAD (2 MB) + Whisper Tiny (40 MB)</string>
 </resources>

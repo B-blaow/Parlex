@@ -279,7 +279,7 @@ fun SettingsScreen(
             SettingsCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
                 InfoRow(stringResource(R.string.settings_version), "1.4.0-beta.1")
                 InfoRow(stringResource(R.string.settings_translation_model), "Hy-MT 1.5 1.8B")
-                InfoRow("TTS", "Sherpa-ONNX Kokoro")
+                InfoRow("TTS", stringResource(R.string.settings_tts_engine_value))
                 InfoRow("STT", "Whisper Tiny + Silero VAD")
                 InfoRow(stringResource(R.string.settings_engine), "llama.cpp")
             }

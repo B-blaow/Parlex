@@ -1,286 +1,182 @@
-<p align="center">
-  <img src="docs/icon.png" width="128" height="128" alt="Parlex Icon" style="border-radius: 22px;" />
-</p>
+# Parlex
 
-<h1 align="center">Parlex</h1>
+Parlex is an offline AI translator for Android. The project targets text
+translation, two-way voice dialogue, and beta camera/photo translation without
+sending user content to the network.
 
-<p align="center">
-  <strong>Офлайн AI-переводчик для Android</strong><br>
-  <sub>33 языка • 1 056 направлений • 100% без интернета • Двунаправленный голосовой диалог</sub>
-</p>
+Latest public signed prerelease: `v1.4.0-beta.1`.
 
-<p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/API-26+-brightgreen" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/Arch-arm64--v8a-blue" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/Version-1.4.0--beta.1-orange" /></a>
-</p>
+Current `main` also contains localization, CI, contributor workflow, and updated
+handoff documentation after that prerelease. A new signed beta can be published
+only after the release keystore is restored on the maintainer machine.
 
-<p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/Model-Tencent_Hy--MT_1.5_1.8B-red?logo=huggingface&logoColor=white" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/Model-Google_TranslateGemma_4B-blue?logo=google&logoColor=white" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/Engine-llama.cpp-black?logo=c%2B%2B&logoColor=white" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/STT-Whisper_Tiny-purple" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/TTS-System_TTS-pink" /></a>
-</p>
+## Product Status
 
----
+- Text translation: offline translation, source auto-detection, persisted
+  direction, copy, speech output, history, and favorites.
+- Dialogue mode: two-way speech flow with separate persisted direction.
+- Camera beta: live camera, full-resolution capture, gallery image translation,
+  OCR fallback, quality hints, torch, camera selection when Android exposes
+  extra lenses, mixed-language capture path, and debug capture packs in debug
+  builds.
+- History: searchable translation history with favorites.
+- Model manager: download, import, export, delete, and select translation models.
+- Settings: interface language, CPU threads, backend choice, and model idle
+  unload timeout.
+- Interface localization: system language, English, Russian, Simplified Chinese,
+  and Traditional Chinese.
 
-## ✨ Возможности
+## Translation Models
 
-| | Функция | Описание |
-|:--|:--|:--|
-| 🌍 | **33 языка** | Все комбинации — 1 056 направлений перевода |
-| ⚡ | **Быстро** | ~1 сек на предложение (Snapdragon 865+) |
-| 🔒 | **Офлайн** | Нет сети — нет утечки данных |
-| 🎙️ | **Голосовой диалог** | Двунаправленный: говорите на любом из двух языков — приложение автоматически определяет и переводит |
-| 🔊 | **Озвучка** | Перевод читается вслух (System TTS) |
-| 📝 | **История** | Полная история переводов с поиском, фильтрами и избранным |
-| ⭐ | **Избранное** | Отмечай важные переводы для быстрого доступа |
-| 📦 | **Менеджер моделей** | Tencent HY-MT 1.5/Hy-MT2 + Google TranslateGemma, включая LiteRT Beta |
-| ⚙️ | **Настройки** | Потоки CPU, бэкенд, авто-выгрузка модели |
+Models are not stored in this repository. They are downloaded or imported by the
+app and remain subject to their own licenses.
 
----
+Stable GGUF families:
 
-## 🏗️ Архитектура
+- Tencent HY-MT 1.5 1.8B GGUF variants.
+- Tencent Hy-MT2 GGUF variants.
+- Google TranslateGemma 4B GGUF variants.
 
-```
-┌─────────────────────────────────────────────────┐
-│                   Parlex App                    │
-├──────────┬──────────┬───────────┬───────────────┤
-│  Text UI │ Voice UI │ History   │ Model Manager │
-│ Compose  │ Compose  │ Room DB   │ Download +    │
-│          │          │ Search    │ GGUF select   │
-├──────────┴──────────┴───────────┴───────────────┤
-│              ViewModels (Hilt DI)               │
-├─────────────────────────────────────────────────┤
-│            Translation Engine (JNI)             │
-│     ┌──────────┐  ┌──────────┐  ┌───────────┐  │
-│     │ llama.cpp│  │Whisper   │  │System TTS │  │
-│     │ (GGUF)   │  │(STT/VAD) │  │(Android)  │  │
-│     └──────────┘  └──────────┘  └───────────┘  │
-├─────────────────────────────────────────────────┤
-│      ARM NEON (arm64-v8a) • Flash Attention     │
-└─────────────────────────────────────────────────┘
+Experimental runtime:
+
+- Google TranslateGemma LiteRT-LM is available as a separate beta path for
+  device benchmarks. GGUF remains the stable route until LiteRT proves a real
+  quality/speed advantage on target phones.
+
+## Architecture
+
+```text
+Android Compose UI
+  -> ViewModels
+  -> repositories, settings, history database
+  -> translation, OCR, speech, TTS, model download engines
+  -> JNI bridge for llama.cpp GGUF inference
 ```
 
----
+Important code areas:
 
-## 🛠️ Технологии
+- `app/src/main/kotlin/com/translive/app/ui/` - Compose screens and navigation.
+- `app/src/main/kotlin/com/translive/app/ui/viewmodel/` - screen state and flows.
+- `app/src/main/kotlin/com/translive/app/engine/` - translation, OCR, STT, TTS,
+  downloads, and LiteRT beta engine.
+- `app/src/main/kotlin/com/translive/app/data/` - settings, model repository, and
+  Room database.
+- `app/src/main/kotlin/com/translive/app/data/model/ModelCatalog.kt` - tracked
+  model catalog metadata.
+- `app/src/main/kotlin/com/translive/app/i18n/` - app locale support and
+  localized text provider.
+- `app/src/main/cpp/` - JNI and native build glue.
 
-| Компонент | Технология |
-|:--|:--|
-| **UI** | Kotlin + Jetpack Compose (Material 3, Dynamic Color) |
-| **Навигация** | 4 вкладки: Текст · Диалог · Модели · Настройки |
-| **Перевод** | [llama.cpp](https://github.com/ggml-org/llama.cpp) — GGUF модели через JNI |
-| **Модели** | [Tencent HY-MT 1.5 1.8B](https://huggingface.co/tencent/HY-MT1.5-1.8B-GGUF), [Tencent Hy-MT2](https://huggingface.co/collections/tencent/hy-mt2) + [Google TranslateGemma 4B](https://huggingface.co/google/translate-gemma-4b-it) |
-| **Распознавание речи** | Whisper Tiny (Sherpa-ONNX) + Silero VAD v5 |
-| **Синтез речи** | Android System TTS |
-| **Хранение** | Room DB — история, сессии, избранное |
-| **DI** | Dagger Hilt |
-| **Сборка** | Gradle 8.11 + CMake 3.14 + NDK r27d LTS |
+## Build Requirements
 
-### Нативный стек
+- Windows or Linux shell with Git.
+- Android Studio / Android SDK.
+- Android SDK platform 36.
+- Android build tools 37.0.0.
+- Android NDK `27.3.13750724`.
+- CMake `3.22.1`.
+- JDK 21 for CI parity. Local Gradle targets Java 17 bytecode.
+- Gradle wrapper `8.11.1`.
+- Android device or emulator with `arm64-v8a`, Android 8.0+ (`minSdk` 26).
 
-| Параметр | Значение |
-|:--|:--|
-| **Sampling** | Official HY-MT: temp=0.7, top_k=20, top_p=0.6, rep_penalty=1.05 |
-| **Flash Attention** | ✅ Включён |
-| **mmap** | ✅ Включён |
-| **OpenMP** | ❌ Отключён (pthreads, стабильнее на Android) |
-| **Thread clamp** | Автоматический к performance cores |
+App build configuration:
 
----
+- `applicationId`: `com.translive.app`
+- `versionCode`: `8`
+- `versionName`: `1.4.0-beta.1`
+- `compileSdk`: `36`
+- `targetSdk`: `35`
+- ABI: `arm64-v8a`
 
-## 📦 Модели перевода
+## Restore After Clean Clone
 
-### Tencent HY-MT 1.5 1.8B — 33 языка
-
-| Квантизация | Размер | RAM | Качество |
-|:--|:--|:--|:--|
-| 1.25bit (Tencent) | 440 МБ | ~0.9 ГБ | ★★☆☆☆ |
-| 2bit (Tencent) | 573 МБ | ~1.1 ГБ | ★★★☆☆ |
-| **Q4_K_M** | **1.05 ГБ** | **~1.8 ГБ** | **★★★★☆ рекомендуется** |
-| Q6_K | 1.37 ГБ | ~2.3 ГБ | ★★★★★ |
-| Q8_0 | 1.78 ГБ | ~2.8 ГБ | ★★★★★ |
-
-### Tencent Hy-MT2 — 33 языка
-
-Hy-MT2 добавлен как актуальная Tencent-линейка: мобильная 1.8B семья и качественная 7B семья. Репозитории Hy-MT2 сейчас опубликованы Tencent с Apache 2.0 metadata.
-
-### Google TranslateGemma 4B — 5 вариантов
-
-Специализированная модель перевода от Google (Gemma 3 architecture). GGUF остается стабильным путем, LiteRT-LM помечен как beta runtime.
-
----
-
-## 🌐 Поддерживаемые языки
-
-<details>
-<summary><strong>33 языка (нажми чтобы раскрыть)</strong></summary>
-
-| | Язык | Код |
-|:--|:--|:--|
-| 🇬🇧 | English | `en` |
-| 🇷🇺 | Русский | `ru` |
-| 🇨🇳 | 中文 (简体) | `zh` |
-| 🇹🇼 | 中文 (繁體) | `zh-TW` |
-| 🇯🇵 | 日本語 | `ja` |
-| 🇰🇷 | 한국어 | `ko` |
-| 🇫🇷 | Français | `fr` |
-| 🇩🇪 | Deutsch | `de` |
-| 🇪🇸 | Español | `es` |
-| 🇵🇹 | Português | `pt` |
-| 🇮🇹 | Italiano | `it` |
-| 🇳🇱 | Nederlands | `nl` |
-| 🇵🇱 | Polski | `pl` |
-| 🇨🇿 | Čeština | `cs` |
-| 🇹🇷 | Türkçe | `tr` |
-| 🇺🇦 | Українська | `uk` |
-| 🇲🇲 | မြန်မာ | `my` |
-| 🇮🇳 | हिन्दी | `hi` |
-| 🇧🇩 | বাংলা | `bn` |
-| 🇮🇳 | ગુજરાતી | `gu` |
-| 🇮🇳 | मराठी | `mr` |
-| 🇮🇳 | தமிழ் | `ta` |
-| 🇮🇳 | తెలుగు | `te` |
-| 🇵🇰 | اردو | `ur` |
-| 🇮🇷 | فارسی | `fa` |
-| 🇮🇱 | עברית | `he` |
-| 🇸🇦 | العربية | `ar` |
-| 🇹🇭 | ไทย | `th` |
-| 🇻🇳 | Tiếng Việt | `vi` |
-| 🇮🇩 | Bahasa Indonesia | `id` |
-| 🇲🇾 | Bahasa Melayu | `ms` |
-| 🇵🇭 | Filipino | `fil` |
-| 🇰🇭 | ភាសាខ្មែរ | `km` |
-
-**+ 5 диалектов:** кантонский, хоккиен, тибетский, монгольский, уйгурский
-
-</details>
-
----
-
-## 🚀 Быстрый старт
-
-### Требования
-
-- Android Studio Ladybug 2024.2+
-- Android SDK 36 + NDK r27d (27.3.13750724)
-- CMake 3.14+
-- Устройство: `arm64-v8a`, Android 8.0+ (API 26)
-
-### 1. Клонирование
-
-```bash
+```powershell
 git clone https://github.com/RandoTeam/Parlex.git
 cd Parlex
+
+git clone https://github.com/ggml-org/llama.cpp.git app/src/main/cpp/llama.cpp
+git -C app/src/main/cpp/llama.cpp checkout 5dcb71166686799f0d873eab7386234302d05ecf
 ```
 
-### 2. Подключение нативных движков
+The exact native engine source of truth is tracked in:
 
-```bash
-# llama.cpp (перевод)
-cd app/src/main/cpp
-git clone --branch b9464 --depth 1 https://github.com/ggml-org/llama.cpp.git
-cd ../../../..
+```text
+app/src/main/cpp/llama.cpp.version
 ```
 
-### 3. Сборка
+Generated files, APKs, model files, native engine checkouts, diagnostics, and
+release signing secrets are intentionally ignored by Git.
 
-```bash
-./gradlew assembleRelease
+## Debug Build
+
+```powershell
+.\gradlew.bat assembleDebug --no-daemon --stacktrace
 ```
 
-### 4. Установка
+Install on a connected device:
 
-```bash
-adb install -r app/build/outputs/apk/release/app-release.apk
+```powershell
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-> **Примечание:** Модели скачиваются внутри приложения через встроенный менеджер моделей.
+Debug APKs are for local testing only and must not be uploaded as beta releases.
 
----
+## Signed Beta / Release Build
 
-## 📱 Экраны приложения
+Signed release builds require `keystore.properties` at the repository root and a
+matching release keystore. These files are local secrets and are not committed.
 
-| Экран | Описание |
-|:--|:--|
-| **Текст** | Ввод текста → мгновенный офлайн-перевод с кнопкой озвучки |
-| **Диалог** | Двунаправленный голосовой режим: говорите на любом из двух выбранных языков |
-| **Модели** | Скачивание, выбор и удаление моделей (HY-MT + TranslateGemma) |
-| **Настройки** | CPU потоки (1-8), бэкенд, таймаут авто-выгрузки |
+Example `keystore.properties` shape:
 
----
-
-## 📂 Структура проекта
-
-```
-app/src/main/
-├── kotlin/com/translive/app/
-│   ├── data/
-│   │   ├── db/              # Room Database + DAO
-│   │   ├── model/           # Entities, ModelVariant, Language
-│   │   ├── ModelRepository   # Active model management
-│   │   └── SettingsRepository # SharedPreferences
-│   ├── di/                  # Hilt DI module
-│   ├── engine/
-│   │   ├── TranslationEngine # JNI → llama.cpp (official HY-MT params)
-│   │   ├── SpeechEngine      # Whisper + Silero VAD (auto-detect)
-│   │   ├── SystemTtsEngine   # Android System TTS
-│   │   └── ModelDownloadManager
-│   └── ui/
-│       ├── screens/         # Compose screens
-│       ├── viewmodel/       # ViewModels
-│       ├── components/      # LanguagePicker, etc.
-│       └── TransLiveNavHost # Navigation graph
-├── cpp/
-│   ├── translive_jni.cpp    # JNI bridge (sampling, chat template)
-│   ├── CMakeLists.txt       # NDK r27d, Flash Attention, OpenMP off
-│   └── llama.cpp/           # git submodule (не в репозитории)
-└── res/
-    ├── mipmap-*/            # App icons
-    ├── drawable/            # Splash screen
-    └── values/              # Themes, strings
+```properties
+storeFile=C:/secure/parlex-release.jks
+storePassword=...
+keyAlias=...
+keyPassword=...
 ```
 
----
+Build and verify after the key is restored:
 
-## 🔧 Конфигурация
+```powershell
+.\gradlew.bat assembleRelease --no-daemon --stacktrace
+& "$env:ANDROID_HOME\build-tools\37.0.0\apksigner.bat" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
+```
 
-Настройки доступны прямо в приложении:
+Before publishing a beta:
 
-| Параметр | Значения | По умолчанию |
-|:--|:--|:--|
-| CPU потоки | 1, 2, 4, 6, 8 | 4 |
-| Бэкенд | CPU / GPU (скоро) / NPU (скоро) | CPU |
-| Авто-выгрузка | Выкл, 1, 2, 5, 10, 30 мин | 5 мин |
+1. Bump `versionCode` and `versionName`.
+2. Update visible version references in docs.
+3. Build the signed release APK.
+4. Verify the APK signature and package version.
+5. Push `main`.
+6. Create a GitHub prerelease and upload the signed APK asset.
 
----
+Release notes should describe user-visible behavior, not internal dependency
+updates.
 
-## 📄 Лицензия
+## CI And Contribution Flow
 
-**Код приложения** — [MIT License](LICENSE)
+GitHub Actions runs `Android Check` for pull requests and pushes to `main`. It
+restores the tracked `llama.cpp` commit and builds a debug APK as a quality
+check only.
 
-**Tencent HY-MT 1.5** — [Tencent HY Community License](https://huggingface.co/tencent/Hy-MT1.5-1.8B-2bit-GGUF).
+External pull requests are welcome, but release control stays with the
+maintainer. See `CONTRIBUTING.md` and `.github/pull_request_template.md`.
 
-**Tencent Hy-MT2** — [Apache 2.0](https://huggingface.co/collections/tencent/hy-mt2).
+## Documentation
 
-**Google TranslateGemma** — [Gemma Terms of Use](https://huggingface.co/google/translate-gemma-4b-it).
+- `PROJECT_STAGE.md` - current project snapshot.
+- `HANDOFF.md` - standalone handoff guide for a new developer.
+- `ROADMAP.md` - next development phases.
+- `docs/LITERT_BETA.md` - LiteRT beta investigation.
+- `docs/HY_MT2.md` - Tencent Hy-MT2 notes.
+- `docs/DEPENDENCY_MODEL_AUDIT_2026-06-01.md` - last dependency/model audit.
+- `THIRD_PARTY_NOTICES.md` - third-party licenses and runtime notices.
 
-Модели **не включены** в репозиторий. Пользователь должен скачать их самостоятельно и принять соответствующую лицензию.
+## License
 
-> ⚠️ Лицензия модели Tencent **не покрывает** ЕС, Великобританию и Южную Корею.
+Application code: MIT License.
 
----
-
-## 👨‍💻 Автор
-
-**Ilia Vlasov** — [@RandoTeam](https://github.com/RandoTeam)
-
----
-
-<p align="center">
-  <sub>Made with ❤️ and llama.cpp</sub>
-</p>
+Translation, OCR, speech, and runtime components use their own licenses. Model
+files are not included in the repository. Review `THIRD_PARTY_NOTICES.md` before
+redistributing builds or model packs.
