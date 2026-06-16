@@ -11,7 +11,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.translive.app.R
-import com.translive.app.i18n.LocaleHelper
+import com.translive.app.i18n.LocalizedTextProvider
 // Uses android system icons for notification
 import com.translive.app.engine.DownloadState
 import com.translive.app.engine.ModelDownloadManager
@@ -51,12 +51,7 @@ class DownloadService : Service() {
     }
 
     @Inject lateinit var downloadManager: ModelDownloadManager
-
-    private val localizedContext: Context by lazy {
-        val prefs = getSharedPreferences("parlex_settings", Context.MODE_PRIVATE)
-        val languageCode = prefs.getString("app_language", LocaleHelper.SYSTEM) ?: LocaleHelper.SYSTEM
-        LocaleHelper.localizedContext(this, languageCode)
-    }
+    @Inject lateinit var texts: LocalizedTextProvider
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var observeJob: Job? = null
@@ -64,7 +59,7 @@ class DownloadService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification(localizedContext.getString(R.string.notification_download_preparing), 0))
+        startForeground(NOTIFICATION_ID, buildNotification(texts.text(R.string.notification_download_preparing), 0))
 
         // Observe download states and update notification
         observeJob = scope.launch {
@@ -82,7 +77,7 @@ class DownloadService : Service() {
                     val done = active.sumOf { it.bytesDownloaded }
                     val progress = if (total > 0) (done * 100 / total).toInt() else 0
                     val names = downloads.keys.joinToString(", ")
-                    updateNotification(localizedContext.getString(R.string.notification_downloading_models, names), progress)
+                    updateNotification(texts.text(R.string.notification_downloading_models, names), progress)
                 }
             }
         }
@@ -108,10 +103,10 @@ class DownloadService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                localizedContext.getString(R.string.notification_download_channel_name),
+                texts.text(R.string.notification_download_channel_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = localizedContext.getString(R.string.notification_download_channel_description)
+                description = texts.text(R.string.notification_download_channel_description)
                 setShowBadge(false)
             }
             val nm = getSystemService(NotificationManager::class.java)
@@ -143,7 +138,7 @@ class DownloadService : Service() {
         builder.setProgress(100, progress, progress == 0)
         builder.setOngoing(true)
         builder.setContentIntent(openPi)
-        builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, localizedContext.getString(R.string.notification_cancel), cancelPi)
+        builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, texts.text(R.string.notification_cancel), cancelPi)
         builder.setSilent(true)
         return builder.build()
     }

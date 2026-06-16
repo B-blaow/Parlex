@@ -571,7 +571,7 @@ fun CameraScreen(
                             IconButton(
                                 onClick = {
                                     captureRequest?.invoke()
-                                        ?: viewModel.failFullResolutionCapture(context.getString(R.string.camera_not_ready))
+                                        ?: viewModel.failCameraNotReady()
                                 },
                                 enabled = !uiState.isCaptureProcessing,
                                 modifier = Modifier
@@ -1104,7 +1104,7 @@ private fun LiveCameraView(
         val capture: () -> Unit = {
             val imageCapture = imageCaptureRef.get()
             if (imageCapture == null) {
-                viewModel.failFullResolutionCapture(context.getString(R.string.camera_not_ready))
+                viewModel.failCameraNotReady()
             } else if (isTakingPicture.compareAndSet(false, true)) {
                 viewModel.startFullResolutionCapture()
                 imageCapture.takePicture(
@@ -1122,7 +1122,7 @@ private fun LiveCameraView(
                                 "ImageCapture failed: ${exception.message}",
                                 exception
                             )
-                            viewModel.failFullResolutionCapture(context.getString(R.string.camera_capture_failed))
+                            viewModel.failFullResolutionCapture()
                         }
                     }
                 )

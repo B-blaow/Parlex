@@ -23,6 +23,7 @@ import com.translive.app.engine.OcrResult
 import com.translive.app.engine.OcrEngine
 import com.translive.app.engine.SystemTtsEngine
 import com.translive.app.engine.TranslationEngine
+import com.translive.app.i18n.LocalizedTextProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -204,7 +205,8 @@ class CameraViewModel @Inject constructor(
     private val translationEngine: TranslationEngine,
     private val cameraTranslateEngine: CameraTranslateEngine,
     private val settings: SettingsRepository,
-    val systemTts: SystemTtsEngine
+    val systemTts: SystemTtsEngine,
+    private val texts: LocalizedTextProvider
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -346,7 +348,7 @@ class CameraViewModel @Inject constructor(
             }
             val ok = cameraTranslateEngine.prepare(state.sourceLanguage.code, state.targetLanguage.code)
             if (!ok) {
-                _uiState.update { it.copy(nmtError = appContext.getString(R.string.error_camera_translation_model_missing)) }
+                _uiState.update { it.copy(nmtError = texts.text(R.string.error_camera_translation_model_missing)) }
             } else {
                 _uiState.update { it.copy(nmtError = null) }
             }
@@ -364,7 +366,7 @@ class CameraViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 captureStatus = CaptureStatus.PROCESSING,
-                captureMessage = appContext.getString(R.string.camera_capture_taking),
+                captureMessage = texts.text(R.string.camera_capture_taking),
                 detectedSourceLanguage = null,
                 detectedSourceLanguages = emptyList(),
                 qualityWarnings = emptyList()
@@ -376,12 +378,16 @@ class CameraViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 captureStatus = CaptureStatus.ERROR,
-                captureMessage = message ?: appContext.getString(R.string.camera_capture_failed),
+                captureMessage = message ?: texts.text(R.string.camera_capture_failed),
                 detectedSourceLanguage = null,
                 detectedSourceLanguages = emptyList(),
                 qualityWarnings = emptyList()
             )
         }
+    }
+
+    fun failCameraNotReady() {
+        failFullResolutionCapture(texts.text(R.string.camera_not_ready))
     }
 
     fun captureGalleryImage(uri: Uri) {
@@ -396,7 +402,7 @@ class CameraViewModel @Inject constructor(
                 paintedBitmap = null,
                 liveBlocks = emptyList(),
                 captureStatus = CaptureStatus.PROCESSING,
-                captureMessage = appContext.getString(R.string.camera_capture_opening_photo),
+                captureMessage = texts.text(R.string.camera_capture_opening_photo),
                 detectedSourceLanguage = null,
                 detectedSourceLanguages = emptyList(),
                 qualityWarnings = emptyList()
@@ -409,7 +415,7 @@ class CameraViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         captureStatus = CaptureStatus.ERROR,
-                        captureMessage = appContext.getString(R.string.camera_capture_open_photo_failed),
+                        captureMessage = texts.text(R.string.camera_capture_open_photo_failed),
                         qualityWarnings = emptyList()
                     )
                 }
@@ -419,7 +425,7 @@ class CameraViewModel @Inject constructor(
             val workBitmap = prepareCaptureBitmap(bitmap)
             enterCaptureMode(
                 workBitmap = workBitmap,
-                message = appContext.getString(R.string.camera_capture_finding_text_photo),
+                message = texts.text(R.string.camera_capture_finding_text_photo),
                 cancelExistingJob = false
             )
             processCaptureBitmap(
@@ -667,7 +673,7 @@ class CameraViewModel @Inject constructor(
                 if (ok) {
                     it.copy(nmtError = null)
                 } else {
-                    it.copy(nmtError = appContext.getString(R.string.error_camera_translation_model_missing))
+                    it.copy(nmtError = texts.text(R.string.error_camera_translation_model_missing))
                 }
             }
         }
@@ -683,7 +689,7 @@ class CameraViewModel @Inject constructor(
             if (ok) {
                 it.copy(nmtError = null)
             } else {
-                it.copy(nmtError = appContext.getString(R.string.error_camera_translation_model_missing))
+                it.copy(nmtError = texts.text(R.string.error_camera_translation_model_missing))
             }
         }
     }
@@ -759,7 +765,7 @@ class CameraViewModel @Inject constructor(
     private fun captureBitmap(bitmap: Bitmap?) {
         if (bitmap == null) {
             isCaptureStarting = false
-            failFullResolutionCapture(appContext.getString(R.string.camera_frame_unavailable))
+            failFullResolutionCapture(texts.text(R.string.camera_frame_unavailable))
             return
         }
 
@@ -807,7 +813,7 @@ class CameraViewModel @Inject constructor(
                 paintedBitmap = workBitmap,
                 liveBlocks = emptyList(),
                 captureStatus = CaptureStatus.PROCESSING,
-                captureMessage = message ?: appContext.getString(R.string.camera_capture_finding_text),
+                captureMessage = message ?: texts.text(R.string.camera_capture_finding_text),
                 detectedSourceLanguage = null,
                 detectedSourceLanguages = emptyList(),
                 qualityWarnings = emptyList()
@@ -922,7 +928,7 @@ class CameraViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         captureStatus = CaptureStatus.EMPTY,
-                        captureMessage = appContext.getString(R.string.camera_capture_text_not_found),
+                        captureMessage = texts.text(R.string.camera_capture_text_not_found),
                         detectedSourceLanguage = if (sourceAuto) effectiveSourceLanguage else null,
                         detectedSourceLanguages = if (sourceAuto) captureOcr.detectedSourceLanguages else emptyList(),
                         qualityWarnings = qualityWarnings
@@ -953,7 +959,7 @@ class CameraViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         captureStatus = CaptureStatus.EMPTY,
-                        captureMessage = appContext.getString(R.string.camera_capture_no_suitable_lines),
+                        captureMessage = texts.text(R.string.camera_capture_no_suitable_lines),
                         detectedSourceLanguage = if (sourceAuto) effectiveSourceLanguage else null,
                         detectedSourceLanguages = if (sourceAuto) captureOcr.detectedSourceLanguages else emptyList(),
                         qualityWarnings = qualityWarnings
@@ -962,7 +968,7 @@ class CameraViewModel @Inject constructor(
                 return
             }
 
-            _uiState.update { it.copy(captureMessage = appContext.getString(R.string.camera_capture_translating_lines)) }
+            _uiState.update { it.copy(captureMessage = texts.text(R.string.camera_capture_translating_lines)) }
 
             if (!translationEngine.isLoaded) {
                 prepareCaptureTranslateModel(effectiveSourceLanguage, targetLanguage)
@@ -985,7 +991,7 @@ class CameraViewModel @Inject constructor(
             val translatedParts: List<String>
             val painted: Bitmap
             if (useDocumentLayout) {
-                _uiState.update { it.copy(captureMessage = appContext.getString(R.string.camera_capture_translating_page)) }
+                _uiState.update { it.copy(captureMessage = texts.text(R.string.camera_capture_translating_page)) }
                 val regions = buildDocumentRegions(captureBlocks)
                 val regionTranslations = translateCaptureDocumentRegions(
                     regions = regions,
@@ -1025,7 +1031,7 @@ class CameraViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     captureStatus = CaptureStatus.ERROR,
-                    captureMessage = appContext.getString(R.string.camera_capture_processing_error),
+                    captureMessage = texts.text(R.string.camera_capture_processing_error),
                     detectedSourceLanguage = null,
                     detectedSourceLanguages = emptyList(),
                     qualityWarnings = emptyList()

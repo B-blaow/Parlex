@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.translive.app.R
 import com.translive.app.data.SettingsRepository
-import com.translive.app.i18n.LocaleHelper
+import com.translive.app.i18n.AppLocale
 import com.translive.app.ui.components.AppBottomNavigation
 import com.translive.app.ui.components.BottomNavDestination
 import com.translive.app.ui.viewmodel.SettingsViewModel
@@ -102,42 +102,37 @@ fun SettingsScreen(
 
                 AppLanguageOption(
                     label = stringResource(R.string.settings_language_system),
-                    selected = appLanguage == LocaleHelper.SYSTEM,
+                    selected = appLanguage == AppLocale.SYSTEM,
                     onClick = {
-                        viewModel.setAppLanguage(LocaleHelper.SYSTEM)
-                        context.findActivity()?.recreate()
+                        applyAppLanguage(context, viewModel, AppLocale.SYSTEM)
                     }
                 )
                 AppLanguageOption(
                     label = stringResource(R.string.settings_language_english),
-                    selected = appLanguage == LocaleHelper.ENGLISH,
+                    selected = appLanguage == AppLocale.ENGLISH,
                     onClick = {
-                        viewModel.setAppLanguage(LocaleHelper.ENGLISH)
-                        context.findActivity()?.recreate()
+                        applyAppLanguage(context, viewModel, AppLocale.ENGLISH)
                     }
                 )
                 AppLanguageOption(
                     label = stringResource(R.string.settings_language_russian),
-                    selected = appLanguage == LocaleHelper.RUSSIAN,
+                    selected = appLanguage == AppLocale.RUSSIAN,
                     onClick = {
-                        viewModel.setAppLanguage(LocaleHelper.RUSSIAN)
-                        context.findActivity()?.recreate()
+                        applyAppLanguage(context, viewModel, AppLocale.RUSSIAN)
                     }
                 )
                 AppLanguageOption(
                     label = stringResource(R.string.settings_language_zh_cn),
-                    selected = appLanguage == LocaleHelper.CHINESE_SIMPLIFIED,
+                    selected = appLanguage == AppLocale.CHINESE_SIMPLIFIED,
                     onClick = {
-                        viewModel.setAppLanguage(LocaleHelper.CHINESE_SIMPLIFIED)
-                        context.findActivity()?.recreate()
+                        applyAppLanguage(context, viewModel, AppLocale.CHINESE_SIMPLIFIED)
                     }
                 )
                 AppLanguageOption(
                     label = stringResource(R.string.settings_language_zh_tw),
-                    selected = appLanguage == LocaleHelper.CHINESE_TRADITIONAL,
+                    selected = appLanguage == AppLocale.CHINESE_TRADITIONAL,
                     onClick = {
-                        viewModel.setAppLanguage(LocaleHelper.CHINESE_TRADITIONAL)
-                        context.findActivity()?.recreate()
+                        applyAppLanguage(context, viewModel, AppLocale.CHINESE_TRADITIONAL)
                     }
                 )
             }
@@ -282,9 +277,9 @@ fun SettingsScreen(
             // --- Info ---
             SectionHeader(icon = Icons.Outlined.Info, title = stringResource(R.string.settings_about))
             SettingsCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                InfoRow(stringResource(R.string.settings_version), "1.0.0-beta")
+                InfoRow(stringResource(R.string.settings_version), "1.4.0-beta.1")
                 InfoRow(stringResource(R.string.settings_translation_model), "Hy-MT 1.5 1.8B")
-                InfoRow("TTS", "Sherpa-ONNX Kokoro")
+                InfoRow("TTS", stringResource(R.string.settings_tts_engine_value))
                 InfoRow("STT", "Whisper Tiny + Silero VAD")
                 InfoRow(stringResource(R.string.settings_engine), "llama.cpp")
             }
@@ -298,6 +293,16 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
+}
+
+private fun applyAppLanguage(
+    context: Context,
+    viewModel: SettingsViewModel,
+    languageCode: String
+) {
+    viewModel.setAppLanguage(languageCode)
+    AppLocale.applyRuntimeLanguage(context, languageCode)
+    context.findActivity()?.recreate()
 }
 
 @Composable

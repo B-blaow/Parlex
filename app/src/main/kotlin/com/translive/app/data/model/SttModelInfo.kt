@@ -12,17 +12,11 @@ object SttModelInfo {
 
     // Whisper tiny multilingual (supports RU + EN + many more)
     const val WHISPER_DISPLAY_NAME = "Whisper Tiny"
-    const val WHISPER_DESCRIPTION = "Multilingual speech recognition • ~40 MB"
     const val WHISPER_BASE_URL = "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models"
     const val WHISPER_ARCHIVE = "sherpa-onnx-whisper-tiny.tar.bz2"
     const val WHISPER_DIR = "sherpa-onnx-whisper-tiny"
     const val WHISPER_SIZE_BYTES = 42_000_000L // ~40 MB compressed
-    const val WHISPER_SIZE_LABEL = "~42 MB"
     const val WHISPER_RAM_MB = 200
 
-    // Combined label
-    const val COMBINED_LABEL = "Voice (STT)"
-    const val COMBINED_DESCRIPTION = "Silero VAD (2 MB) + Whisper Tiny (40 MB)"
-    const val COMBINED_SIZE_LABEL = "~42 MB"
     val TOTAL_SIZE_BYTES = VAD_SIZE_BYTES + WHISPER_SIZE_BYTES
 }

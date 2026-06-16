@@ -1,10 +1,13 @@
 package com.translive.app.i18n
 
+import android.app.LocaleManager
 import android.content.Context
 import android.content.res.Configuration
+import android.os.Build
+import android.os.LocaleList
 import java.util.Locale
 
-object LocaleHelper {
+object AppLocale {
     const val SYSTEM = "system"
     const val ENGLISH = "en"
     const val RUSSIAN = "ru"
@@ -19,14 +22,30 @@ object LocaleHelper {
         CHINESE_TRADITIONAL
     )
 
+    fun normalize(languageCode: String): String =
+        if (languageCode in supportedLanguageCodes) languageCode else SYSTEM
+
     fun localizedContext(base: Context, languageCode: String): Context {
-        if (languageCode == SYSTEM) return base
-        val locale = languageCode.toLocale()
-        Locale.setDefault(locale)
+        val normalized = normalize(languageCode)
+        if (normalized == SYSTEM) return base
+
+        val locale = normalized.toLocale()
         val config = Configuration(base.resources.configuration)
         config.setLocale(locale)
         config.setLayoutDirection(locale)
         return base.createConfigurationContext(config)
+    }
+
+    fun applyRuntimeLanguage(context: Context, languageCode: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+
+        val normalized = normalize(languageCode)
+        val locales = if (normalized == SYSTEM) {
+            LocaleList.getEmptyLocaleList()
+        } else {
+            LocaleList.forLanguageTags(normalized)
+        }
+        context.getSystemService(LocaleManager::class.java).applicationLocales = locales
     }
 
     private fun String.toLocale(): Locale = when (this) {

@@ -44,7 +44,8 @@ android {
 
     signingConfigs {
         create("release") {
-            if (keystoreFile.exists()) {
+            val f = rootProject.file("keystore.properties")
+            if (f.exists()) {
                 storeFile = rootProject.file(keystoreProps["storeFile"].toString())
                 storePassword = keystoreProps["storePassword"].toString()
                 keyAlias = keystoreProps["keyAlias"].toString()
@@ -57,9 +58,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            if (keystoreFile.exists()) {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -126,7 +125,7 @@ dependencies {
     // OkHttp for model downloads
     implementation("com.squareup.okhttp3:okhttp:5.3.2")
 
-    // Sherpa-ONNX for Kokoro TTS
+    // Sherpa-ONNX for offline STT (Whisper Tiny + Silero VAD)
     implementation(files("libs/sherpa-onnx-1.13.1.aar"))
 
     // Apache Commons Compress for tar.bz2 extraction

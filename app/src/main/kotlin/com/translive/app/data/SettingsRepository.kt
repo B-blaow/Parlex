@@ -1,7 +1,7 @@
 package com.translive.app.data
 
 import android.content.Context
-import com.translive.app.i18n.LocaleHelper
+import com.translive.app.i18n.AppLocale
 import com.translive.app.data.model.Language
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -39,8 +39,8 @@ class SettingsRepository @Inject constructor(
     }
 
     var appLanguageCode: String
-        get() = prefs.getString(KEY_APP_LANGUAGE, LocaleHelper.SYSTEM) ?: LocaleHelper.SYSTEM
-        set(value) = prefs.edit().putString(KEY_APP_LANGUAGE, value).apply()
+        get() = prefs.getString(KEY_APP_LANGUAGE, AppLocale.SYSTEM) ?: AppLocale.SYSTEM
+        set(value) = prefs.edit().putString(KEY_APP_LANGUAGE, AppLocale.normalize(value)).apply()
 
     var threads: Int
         get() = prefs.getInt(KEY_THREADS, 4)

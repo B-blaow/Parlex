@@ -6,7 +6,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.translive.app.R
 import com.translive.app.data.ModelRepository
-import com.translive.app.i18n.LocaleHelper
 import com.translive.app.data.SettingsRepository
 import com.translive.app.data.db.TranslationDao
 import com.translive.app.data.model.Language
@@ -16,6 +15,7 @@ import com.translive.app.engine.LanguageDetectionEngine
 import com.translive.app.engine.LiteRtTranslationEngine
 import com.translive.app.engine.TranslationEngine
 import com.translive.app.engine.SystemTtsEngine
+import com.translive.app.i18n.LocalizedTextProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -54,11 +54,12 @@ class TranslationViewModel @Inject constructor(
     private val modelRepository: ModelRepository,
     private val settings: SettingsRepository,
     val systemTts: SystemTtsEngine,
+    private val texts: LocalizedTextProvider,
     private val savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(app) {
 
     private fun tr(id: Int, vararg args: Any): String =
-        LocaleHelper.localizedContext(app, settings.appLanguageCode).getString(id, *args)
+        texts.text(id, *args)
 
     private val _uiState = MutableStateFlow(
         TranslationUiState(

@@ -119,7 +119,7 @@ class TranslationEngine {
         maxTokens: Int = 2048
     ): String {
         return nativeLock.withLock {
-            if (!isLoadedLocked()) throw IllegalStateException("Translation model is not loaded")
+            if (!isLoadedLocked()) throw IllegalStateException("Модель перевода не загружена")
             val style = getActivePromptStyle()
             val prompt = buildPrompt(sourceText, source, target, style)
             val useChatTemplate = true  // Both HY-MT and TranslateGemma use chat template
@@ -148,7 +148,7 @@ class TranslationEngine {
         maxTokens: Int = 2048
     ): String {
         return nativeLock.withLock {
-            if (!isLoadedLocked()) throw IllegalStateException("Translation model is not loaded")
+            if (!isLoadedLocked()) throw IllegalStateException("Модель перевода не загружена")
             val style = getActivePromptStyle()
             val prompt = buildStructuredPrompt(sourceText, source, target, style)
             val useChatTemplate = true
@@ -179,7 +179,7 @@ class TranslationEngine {
         onComplete: ((StreamResult) -> Unit)? = null
     ): Flow<String> = channelFlow {
         val streamResult = nativeLock.withLock {
-            if (!isLoadedLocked()) throw IllegalStateException("Translation model is not loaded")
+            if (!isLoadedLocked()) throw IllegalStateException("Модель перевода не загружена")
             val style = getActivePromptStyle()
             val prompt = buildPrompt(sourceText, source, target, style)
             val useChatTemplate = true  // Both HY-MT and TranslateGemma use chat template

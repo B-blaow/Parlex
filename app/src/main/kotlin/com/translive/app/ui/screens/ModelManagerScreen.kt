@@ -28,6 +28,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.translive.app.R
 import com.translive.app.engine.DownloadState
 import com.translive.app.data.model.ModelFamily
+import com.translive.app.data.model.ModelVariant
 import com.translive.app.data.model.SttModelInfo
 import com.translive.app.ui.components.AppBottomNavigation
 import com.translive.app.ui.components.BottomNavDestination
@@ -389,7 +390,7 @@ private fun FamilyHeader(
 
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "${family.description} • ${family.license.displayName}",
+                text = "${localizedFamilyDescription(family)} • ${family.license.displayName}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
                 maxLines = 1,
@@ -450,7 +451,7 @@ private fun SttModelCard(
 
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = SttModelInfo.COMBINED_DESCRIPTION,
+                text = stringResource(R.string.stt_combined_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -463,7 +464,7 @@ private fun SttModelCard(
                 Icon(Icons.Outlined.FolderZip, null, modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    text = SttModelInfo.COMBINED_SIZE_LABEL,
+                    text = formatSize(SttModelInfo.TOTAL_SIZE_BYTES),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -640,7 +641,7 @@ private fun ModelCard(
 
             // Description
             Text(
-                text = variant.description,
+                text = localizedVariantDescription(variant),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -657,7 +658,7 @@ private fun ModelCard(
                 Icon(Icons.Outlined.FolderZip, null, modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    text = remember(variant.sizeLabel) { variant.sizeLabel },
+                    text = formatSize(variant.sizeBytes),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -802,6 +803,54 @@ private fun ModelCard(
             }
         )
     }
+}
+
+@Composable
+private fun localizedFamilyDescription(family: ModelFamily): String {
+    val resourceId = when (family.id) {
+        "hy_mt" -> R.string.model_family_hy_mt_desc
+        "hy_mt2_1_8b" -> R.string.model_family_hy_mt2_1_8b_desc
+        "hy_mt2_7b" -> R.string.model_family_hy_mt2_7b_desc
+        "translate_gemma" -> R.string.model_family_translate_gemma_desc
+        "translate_gemma_litert_beta" -> R.string.model_family_translate_gemma_litert_beta_desc
+        else -> null
+    }
+    return resourceId?.let { stringResource(it) } ?: family.description
+}
+
+@Composable
+private fun localizedVariantDescription(variant: ModelVariant): String {
+    val resourceId = when (variant.id) {
+        "hy_mt:1_25bit" -> R.string.model_variant_hy_mt_1_25bit_desc
+        "hy_mt:2bit" -> R.string.model_variant_hy_mt_2bit_desc
+        "hy_mt:q4_k_m" -> R.string.model_variant_hy_mt_q4_k_m_desc
+        "hy_mt:q6_k" -> R.string.model_variant_hy_mt_q6_k_desc
+        "hy_mt:q8_0" -> R.string.model_variant_hy_mt_q8_0_desc
+        "hy_mt2_1_8b:1_25bit" -> R.string.model_variant_hy_mt2_1_8b_1_25bit_desc
+        "hy_mt2_1_8b:2bit" -> R.string.model_variant_hy_mt2_1_8b_2bit_desc
+        "hy_mt2_1_8b:q4_k_m" -> R.string.model_variant_hy_mt2_1_8b_q4_k_m_desc
+        "hy_mt2_1_8b:q6_k" -> R.string.model_variant_hy_mt2_1_8b_q6_k_desc
+        "hy_mt2_1_8b:q8_0" -> R.string.model_variant_hy_mt2_1_8b_q8_0_desc
+        "hy_mt2_7b:q4_k_m" -> R.string.model_variant_hy_mt2_7b_q4_k_m_desc
+        "hy_mt2_7b:q6_k" -> R.string.model_variant_hy_mt2_7b_q6_k_desc
+        "hy_mt2_7b:q8_0" -> R.string.model_variant_hy_mt2_7b_q8_0_desc
+        "translate_gemma:q2_k" -> R.string.model_variant_translate_gemma_q2_k_desc
+        "translate_gemma:q3_k_s" -> R.string.model_variant_translate_gemma_q3_k_s_desc
+        "translate_gemma:q3_k_m" -> R.string.model_variant_translate_gemma_q3_k_m_desc
+        "translate_gemma:q3_k_l" -> R.string.model_variant_translate_gemma_q3_k_l_desc
+        "translate_gemma:iq4_xs" -> R.string.model_variant_translate_gemma_iq4_xs_desc
+        "translate_gemma:q4_k_s" -> R.string.model_variant_translate_gemma_q4_k_s_desc
+        "translate_gemma:q4_k_m" -> R.string.model_variant_translate_gemma_q4_k_m_desc
+        "translate_gemma:q5_k_s" -> R.string.model_variant_translate_gemma_q5_k_s_desc
+        "translate_gemma:q5_k_m" -> R.string.model_variant_translate_gemma_q5_k_m_desc
+        "translate_gemma:q6_k" -> R.string.model_variant_translate_gemma_q6_k_desc
+        "translate_gemma:q8_0" -> R.string.model_variant_translate_gemma_q8_0_desc
+        "translate_gemma:f16" -> R.string.model_variant_translate_gemma_f16_desc
+        "translate_gemma_litert_beta:int4" -> R.string.model_variant_translate_gemma_litert_beta_int4_desc
+        "translate_gemma_litert_beta:dynamic_int8" -> R.string.model_variant_translate_gemma_litert_beta_dynamic_int8_desc
+        else -> null
+    }
+    return resourceId?.let { stringResource(it) } ?: variant.description
 }
 
 @Composable

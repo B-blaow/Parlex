@@ -119,12 +119,12 @@ class ModelRepository @Inject constructor(
     ): Result<Unit> {
         val sourceFile = File(modelsDir, variant.filename)
         if (!sourceFile.exists()) {
-            return Result.failure(IllegalStateException("Model file not found"))
+            return Result.failure(IllegalStateException("Файл модели не найден"))
         }
 
         val resolver = context.contentResolver
         val outputStream = resolver.openOutputStream(destUri)
-            ?: return Result.failure(IllegalStateException("Failed to open file for writing"))
+            ?: return Result.failure(IllegalStateException("Не удалось открыть файл для записи"))
 
         return try {
             val totalSize = sourceFile.length()
@@ -163,11 +163,11 @@ class ModelRepository @Inject constructor(
         val isGguf = filename.endsWith(".gguf", ignoreCase = true)
         val isLiteRtLm = filename.endsWith(".litertlm", ignoreCase = true)
         if (!isGguf && !isLiteRtLm) {
-            return Result.failure(IllegalArgumentException("File must have .gguf or .litertlm extension"))
+            return Result.failure(IllegalArgumentException("Файл должен иметь расширение .gguf или .litertlm"))
         }
 
         val inputStream = resolver.openInputStream(uri)
-            ?: return Result.failure(IllegalStateException("Failed to open file"))
+            ?: return Result.failure(IllegalStateException("Не удалось открыть файл"))
 
         return try {
             val magicSize = if (isLiteRtLm) 8 else 4
@@ -184,7 +184,7 @@ class ModelRepository @Inject constructor(
                 magic.copyOfRange(0, 8).contentEquals("LITERTLM".toByteArray())
             if (!validGguf && !validLiteRtLm) {
                 inputStream.close()
-                return Result.failure(IllegalArgumentException("File is not a supported model"))
+                return Result.failure(IllegalArgumentException("Файл не является поддерживаемой моделью"))
             }
 
             // Get total size for progress

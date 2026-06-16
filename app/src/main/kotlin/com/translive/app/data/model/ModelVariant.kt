@@ -21,8 +21,8 @@ data class ModelVariant(
     val sizeGb: Double get() = sizeBytes / (1024.0 * 1024.0 * 1024.0)
 
     val sizeLabel: String get() = when {
-        sizeGb >= 1.0 -> "%.2f GB".format(sizeGb)
-        else -> "%.0f MB".format(sizeMb)
+        sizeGb >= 1.0 -> "%.2f ГБ".format(sizeGb)
+        else -> "%.0f МБ".format(sizeMb)
     }
 
     /** Extract family ID from namespaced ID */

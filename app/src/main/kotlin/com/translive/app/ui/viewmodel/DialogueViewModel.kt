@@ -5,13 +5,13 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.translive.app.R
 import com.translive.app.data.ModelRepository
-import com.translive.app.i18n.LocaleHelper
 import com.translive.app.data.db.DialogueDao
 import com.translive.app.data.model.DialogueSession
 import com.translive.app.data.model.Language
 import com.translive.app.data.model.ModelRuntime
 import com.translive.app.data.SettingsRepository
 import com.translive.app.engine.*
+import com.translive.app.i18n.LocalizedTextProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -58,11 +58,12 @@ class DialogueViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val systemTts: SystemTtsEngine,
     private val speechEngine: SpeechEngine,
-    private val dialogueDao: DialogueDao
+    private val dialogueDao: DialogueDao,
+    private val texts: LocalizedTextProvider
 ) : AndroidViewModel(app) {
 
     private fun tr(id: Int, vararg args: Any): String =
-        LocaleHelper.localizedContext(app, settings.appLanguageCode).getString(id, *args)
+        texts.text(id, *args)
 
     private val _uiState = MutableStateFlow(
         DialogueUiState(

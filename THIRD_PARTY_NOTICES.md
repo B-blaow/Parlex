@@ -12,25 +12,11 @@ is subject to its own license, listed below.
 - **Usage:** LLM inference engine for translation (linked via JNI)
 - **Note:** Not included in this repository. Cloned separately during build.
 
-## whisper.cpp
-
-- **Repository:** https://github.com/ggerganov/whisper.cpp
-- **License:** MIT License
-- **Usage:** Whisper speech recognition engine (via Sherpa-ONNX)
-- **Note:** Not included in this repository.
-
 ## Sherpa-ONNX
 
 - **Repository:** https://github.com/k2-fsa/sherpa-onnx
 - **License:** Apache License 2.0
-- **Usage:** Runtime for TTS (Kokoro) and STT (Whisper + VAD)
-
-## Kokoro TTS (Model)
-
-- **Repository:** https://huggingface.co/hexgrad/Kokoro-82M
-- **License:** Apache License 2.0
-- **Usage:** Text-to-speech voice synthesis model
-- **Note:** Downloaded at runtime via in-app model manager. Not included in repository.
+- **Usage:** Offline STT runtime for Whisper Tiny + Silero VAD
 
 ## Silero VAD
 
@@ -93,6 +79,14 @@ is subject to its own license, listed below.
 | Apache Commons Compress | Apache 2.0 |
 | Navigation Compose | Apache 2.0 |
 | Kotlin Coroutines | Apache 2.0 |
+| CameraX | Apache 2.0 |
+| ML Kit Text Recognition | Apache 2.0 / Google ML Kit terms |
+| ML Kit On-Device Translation | Apache 2.0 / Google ML Kit terms |
+| ML Kit Language ID | Apache 2.0 / Google ML Kit terms |
+| LiteRT-LM Android | Apache 2.0 / Google AI Edge terms |
+| Tesseract4Android | Apache 2.0 |
+| Tesseract OCR | Apache 2.0 |
+| Lottie Compose | Apache 2.0 |
 
 All Android libraries are fetched via Gradle and are NOT included
 in this repository source code.
