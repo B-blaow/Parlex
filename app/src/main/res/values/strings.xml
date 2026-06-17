@@ -66,6 +66,7 @@
     <string name="auto_detecting">Auto...</string>
     <string name="auto_detected">Auto: %1$s %2$s</string>
     <string name="translation_input_placeholder">Enter text to translate...</string>
+    <string name="cd_paste">Paste</string>
     <string name="cd_clear">Clear</string>
     <string name="cd_voice_input">Voice input</string>
     <string name="translation_in_progress">Translating...</string>
