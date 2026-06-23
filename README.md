@@ -4,11 +4,11 @@ Parlex is an offline AI translator for Android. The project targets text
 translation, two-way voice dialogue, and beta camera/photo translation without
 sending user content to the network.
 
-Latest public signed prerelease: `v1.4.0-beta.1`.
+Latest public signed prerelease: `v1.4.1-beta.1`.
 
-Current `main` also contains localization, CI, contributor workflow, and updated
-handoff documentation after that prerelease. A new signed beta can be published
-only after the release keystore is restored on the maintainer machine.
+This beta is signed with a new 2026 release key. Devices that already have an
+older Parlex APK signed with the previous key must uninstall the old build before
+installing this one.
 
 ## Product Status
 
@@ -82,8 +82,8 @@ Important code areas:
 App build configuration:
 
 - `applicationId`: `com.translive.app`
-- `versionCode`: `8`
-- `versionName`: `1.4.0-beta.1`
+- `versionCode`: `9`
+- `versionName`: `1.4.1-beta.1`
 - `compileSdk`: `36`
 - `targetSdk`: `35`
 - ABI: `arm64-v8a`

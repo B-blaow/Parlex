@@ -18,19 +18,21 @@ processed locally whenever the selected feature is available offline.
 
 - Repository: `https://github.com/RandoTeam/Parlex.git`
 - Main branch: `main`
-- Latest public signed beta: `v1.4.0-beta.1`
+- Latest public signed beta: `v1.4.1-beta.1`
 - App package: `com.translive.app`
-- Current app version in Gradle: `1.4.0-beta.1`, `versionCode` 8
+- Current app version in Gradle: `1.4.1-beta.1`, `versionCode` 9
 - Supported ABI: `arm64-v8a`
 - Native translation runtime: `llama.cpp` through JNI
 - Stable model format: GGUF
 - Experimental model format: LiteRT-LM beta
 
-Current release blocker:
+Current release signing state:
 
-- `keystore.properties` and the original Parlex release keystore are not present
-  in this workstation checkout.
-- Do not publish a new beta until the original signing key is restored.
+- The original release signing key was not available after the workstation
+  rebuild.
+- `v1.4.1-beta.1` is signed with a newly generated 2026 Parlex release key.
+- Users with older Parlex APKs signed by the previous key must uninstall the old
+  app before installing this beta.
 - Do not use debug APKs as releases.
 
 ## What Is Implemented
@@ -146,7 +148,7 @@ Recommended smoke test:
 
 ## Signed Beta Release Process
 
-Prerequisite: restore `keystore.properties` and the original release keystore.
+Prerequisite: restore `keystore.properties` and the current release keystore.
 
 Example local secret file:
 
@@ -179,8 +181,7 @@ Release checklist:
 8. Create GitHub prerelease and upload the signed APK asset.
 9. Release notes must describe user-facing functionality only.
 
-Recommended next beta version: use the next beta after `v1.4.0-beta.1` once the
-signing key is restored.
+Recommended next beta version: use the next beta after `v1.4.1-beta.1`.
 
 ## Key Files
 
@@ -212,7 +213,7 @@ signing key is restored.
 
 ## Next Recommended Work
 
-1. Restore release signing and publish the next signed beta.
+1. Back up the new local release keystore outside the repository.
 2. Run full manual smoke on a real phone.
 3. Continue camera document polish.
 4. Benchmark LiteRT on Snapdragon 8 Elite against GGUF.

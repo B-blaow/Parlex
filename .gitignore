@@ -38,3 +38,12 @@ build_output*.txt
 # Native engines (cloned separately)
 app/src/main/cpp/llama.cpp/
 app/src/main/cpp/whisper.cpp/
+
+# Local planning and release scratch
+/plans/
+/scratch/
+/tmp/
+/work-notes/
+/*.local.md
+/RELEASE_NOTES*.md
+/release-notes*.md
